@@ -205,13 +205,7 @@ npm run preview
 
 ## 🔗 관련 저장소
 
-* **Backend**: [icn_flight_alert](https://github.com/your-org/icn_flight_alert) — FastAPI, PostgreSQL, JWT, 비행편·알림·챗봇 API
-
----
-
-## 📝 라이선스
-
-백엔드 프로젝트 정책에 맞추거나 별도 `LICENSE` 파일을 추가하세요.
+* **Backend**: [icn-flight-alert](https://github.com/your-org/icn-flight-alert) — FastAPI, PostgreSQL, JWT, 비행편·알림·챗봇 API
 
 ---
 
