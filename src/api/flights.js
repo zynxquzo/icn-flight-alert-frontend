@@ -10,8 +10,15 @@ export async function fetchFlights(params = {}) {
 }
 
 /**
+ * GET /flights/{flight_pk} — 상세 (FlightResponse 전 필드)
+ */
+export async function fetchFlightDetail(flightPk) {
+  const { data } = await api.get(`/flights/${flightPk}`);
+  return data;
+}
+
+/**
  * POST /flights — 비행편 등록
- * @param {{ flight_id: string, flight_date: string, flight_type: 'departure' | 'arrival' }} payload
  */
 export async function createFlight(payload) {
   const { data } = await api.post('/flights', payload);

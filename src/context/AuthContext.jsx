@@ -1,41 +1,49 @@
-// src/context/AuthContext.jsx
-import { createContext, useContext, useState, useEffect } from 'react';
-import api from '../api/axios';
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import * as authApi from '../api/auth';
 import { getApiErrorMessage } from '../utils/apiError';
+import { AuthContext } from './auth-context';
 
-const AuthContext = createContext();
-
-export const AuthProvider = ({ children }) => {
+export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // 페이지 로드 시 토큰 확인
-    const token = localStorage.getItem('token');
+    const legacy = localStorage.getItem('token');
+    if (legacy && !localStorage.getItem('access_token')) {
+      localStorage.setItem('access_token', legacy);
+      localStorage.removeItem('token');
+    }
+  }, []);
+
+  const fetchUser = useCallback(async () => {
+    try {
+      const data = await authApi.fetchMe();
+      setUser(data);
+    } catch {
+      localStorage.removeItem('access_token');
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
     if (token) {
       fetchUser();
     } else {
       setLoading(false);
     }
-  }, []);
-
-  const fetchUser = async () => {
-    try {
-      const response = await api.get('/me');
-      setUser(response.data);
-    } catch (error) {
-      console.error('사용자 정보 조회 실패:', error);
-      localStorage.removeItem('token');
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [fetchUser]);
 
   const login = async (email, password) => {
     try {
-      const response = await api.post('/auth/login', { email, password });
-      localStorage.setItem('token', response.data.access_token);
-      await fetchUser();
+      const data = await authApi.login({ email, password });
+      localStorage.setItem('access_token', data.access_token);
+      const me = await authApi.fetchMe();
+      setUser(me);
       return { success: true };
     } catch (error) {
       return {
@@ -45,16 +53,22 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    setUser(null);
-    window.location.href = '/login';
+  const logout = async () => {
+    try {
+      await authApi.logout();
+    } catch {
+      /* 서버 실패 시에도 로컬 세션 정리 */
+    } finally {
+      localStorage.removeItem('access_token');
+      setUser(null);
+      navigate('/login');
+    }
   };
 
   const signup = async (email, password) => {
     try {
-      const response = await api.post('/auth/signup', { email, password });
-      return { success: true, data: response.data };
+      const data = await authApi.signup({ email, password });
+      return { success: true, data };
     } catch (error) {
       return {
         success: false,
@@ -68,12 +82,4 @@ export const AuthProvider = ({ children }) => {
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
-  return context;
-};
+}

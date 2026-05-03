@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import AppLayout from '../components/AppLayout';
+import Badge from '../components/Badge';
 import { fetchChatbotInfo, sendChatMessage } from '../api/chatbot';
 import { getApiErrorMessage } from '../utils/apiError';
 
@@ -8,7 +9,32 @@ const TERMINALS = [
   { value: 'T2', label: '제2여객터미널 (T2)' },
 ];
 
-function ChatbotPage() {
+const EXAMPLES = [
+  {
+    label: '1시간 대기',
+    text: '1시간 정도 남았는데 게이트 근처에서 할 만한 게 뭐가 있을까?',
+    hours: 1,
+  },
+  {
+    label: '2시간 대기',
+    text: '2시간 여유가 있는데 식사하고 쇼핑하기 좋은 코스 추천해줘.',
+    hours: 2,
+  },
+  {
+    label: '3시간 대기',
+    text: '3시간 기다려야 하는데 뭐하면 좋을까요?',
+    hours: 3,
+  },
+];
+
+function modeLabel(mode) {
+  const m = String(mode || '').toLowerCase();
+  if (m === 'agent') return 'AGENT';
+  if (m === 'rag') return 'RAG';
+  return 'LEGACY';
+}
+
+export default function ChatbotPage() {
   const [info, setInfo] = useState(null);
   const [infoError, setInfoError] = useState('');
   const [terminal, setTerminal] = useState('T1');
@@ -37,6 +63,11 @@ function ChatbotPage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, sending]);
 
+  const applyExample = (ex) => {
+    setInput(ex.text);
+    setWaitHours(String(ex.hours));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const text = input.trim();
@@ -53,7 +84,15 @@ function ChatbotPage() {
         wait_time_hours: waitHours === '' ? null : waitHours,
       });
       const reply = data?.response ?? '(응답 없음)';
-      setMessages((prev) => [...prev, { role: 'assistant', text: reply }]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          text: reply,
+          mode: data?.mode,
+          sources: Array.isArray(data?.sources) ? data.sources : [],
+        },
+      ]);
     } catch (err) {
       const msg = getApiErrorMessage(err, '챗봇 응답을 받지 못했습니다.');
       setMessages((prev) => [
@@ -67,15 +106,16 @@ function ChatbotPage() {
 
   return (
     <AppLayout>
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">공항 안내 챗봇</h1>
-          <p className="text-gray-600 mt-1 text-sm">
-            대기 시간 동안 식사·쇼핑·휴식 등 인천공항 이용 팁을 물어보세요. 백엔드{' '}
-            <code className="text-xs bg-gray-100 px-1 rounded">POST /chatbot/chat</code>과 연동됩니다.
+      <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">공항 안내 챗봇</h1>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+            대기 시간 동안 식사·쇼핑·휴식 등 인천공항 이용 팁을 물어보세요.{' '}
+            <code className="rounded bg-slate-100 px-1 text-xs dark:bg-slate-800">POST /chatbot/chat</code>
+            과 연동됩니다.
           </p>
           {infoError && (
-            <p className="mt-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
               {infoError}
             </p>
           )}
@@ -84,27 +124,55 @@ function ChatbotPage() {
               {info.features.map((f) => (
                 <li
                   key={f}
-                  className="text-xs px-2 py-1 rounded-full bg-indigo-50 text-indigo-800 border border-indigo-100"
+                  className="rounded-full border border-indigo-100 bg-indigo-50 px-2 py-1 text-xs text-indigo-900 dark:border-indigo-900 dark:bg-indigo-950/50 dark:text-indigo-100"
                 >
                   {f}
                 </li>
               ))}
             </ul>
           )}
+          {info?.env && (
+            <details className="mt-4 rounded-xl border border-slate-200 bg-slate-50/80 p-3 dark:border-slate-700 dark:bg-slate-800/50">
+              <summary className="cursor-pointer text-sm font-medium text-slate-800 dark:text-slate-200">
+                환경 변수 안내 (운영·관리자 참고)
+              </summary>
+              <dl className="mt-3 space-y-2 text-xs text-slate-600 dark:text-slate-400">
+                {Object.entries(info.env).map(([key, val]) => (
+                  <div key={key} className="grid gap-1 sm:grid-cols-[minmax(0,140px)_1fr]">
+                    <dt className="font-mono text-slate-500 dark:text-slate-500">{key}</dt>
+                    <dd>{val}</dd>
+                  </div>
+                ))}
+              </dl>
+            </details>
+          )}
         </div>
 
-        <div className="bg-white rounded-lg shadow flex flex-col h-[min(560px,calc(100vh-280px))]">
-          <div className="border-b border-gray-100 p-4 space-y-3">
-            <div className="grid sm:grid-cols-2 gap-3">
+        <div className="flex h-[min(560px,calc(100vh-280px))] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
+          <div className="space-y-3 border-b border-slate-100 p-4 dark:border-slate-800">
+            <p className="text-xs text-slate-500 dark:text-slate-400">빠른 질문</p>
+            <div className="flex flex-wrap gap-2">
+              {EXAMPLES.map((ex) => (
+                <button
+                  key={ex.label}
+                  type="button"
+                  onClick={() => applyExample(ex)}
+                  className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-800 hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-200 dark:hover:bg-indigo-900/50"
+                >
+                  {ex.label}
+                </button>
+              ))}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                <label htmlFor="cb-terminal" className="block text-xs font-medium text-gray-500 mb-1">
+                <label htmlFor="cb-terminal" className="mb-1 block text-xs font-medium text-slate-500">
                   터미널
                 </label>
                 <select
                   id="cb-terminal"
                   value={terminal}
                   onChange={(e) => setTerminal(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
                 >
                   {TERMINALS.map((t) => (
                     <option key={t.value} value={t.value}>
@@ -114,7 +182,7 @@ function ChatbotPage() {
                 </select>
               </div>
               <div>
-                <label htmlFor="cb-wait" className="block text-xs font-medium text-gray-500 mb-1">
+                <label htmlFor="cb-wait" className="mb-1 block text-xs font-medium text-slate-500">
                   대기 시간 (시간, 선택)
                 </label>
                 <input
@@ -126,18 +194,18 @@ function ChatbotPage() {
                   placeholder="예: 3"
                   value={waitHours}
                   onChange={(e) => setWaitHours(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
                 />
               </div>
             </div>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-slate-500 dark:text-slate-500">
               대기 시간을 넣으면 그에 맞춘 추천에 도움이 됩니다. 비워 두면 일반 질문만 전달됩니다.
             </p>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/80">
+          <div className="flex-1 space-y-4 overflow-y-auto bg-slate-50/90 p-4 dark:bg-slate-950/40">
             {messages.length === 0 && !sending && (
-              <p className="text-center text-gray-500 text-sm py-12">
+              <p className="py-12 text-center text-sm text-slate-500">
                 예: &quot;2시간 기다리는데 가볼 만한 곳 있어?&quot;
               </p>
             )}
@@ -149,19 +217,49 @@ function ChatbotPage() {
                 <div
                   className={`max-w-[85%] rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap ${
                     m.role === 'user'
-                      ? 'bg-blue-600 text-white rounded-br-md'
+                      ? 'rounded-br-md bg-indigo-600 text-white'
                       : m.isError
-                        ? 'bg-red-50 text-red-800 border border-red-200 rounded-bl-md'
-                        : 'bg-white text-gray-800 border border-gray-200 shadow-sm rounded-bl-md'
+                        ? 'rounded-bl-md border border-red-200 bg-red-50 text-red-900 dark:border-red-900 dark:bg-red-950/50 dark:text-red-100'
+                        : 'rounded-bl-md border border-slate-200 bg-white text-slate-800 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100'
                   }`}
                 >
-                  {m.text}
+                  <div>{m.text}</div>
+                  {m.role === 'assistant' && !m.isError && (
+                    <div className="mt-2 space-y-2 border-t border-slate-100 pt-2 dark:border-slate-700">
+                      {m.mode && (
+                        <Badge variant="info" className="text-[10px] uppercase tracking-wide">
+                          {modeLabel(m.mode)}
+                        </Badge>
+                      )}
+                      {m.sources?.length > 0 && (
+                        <ul className="space-y-1 text-xs">
+                          <li className="font-medium text-slate-500 dark:text-slate-400">근거 문서</li>
+                          {m.sources.map((s, j) => (
+                            <li key={s.doc_id || j}>
+                              {s.source_url ? (
+                                <a
+                                  href={s.source_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-indigo-600 underline hover:text-indigo-800 dark:text-indigo-400"
+                                >
+                                  {s.title || s.doc_id || '링크'}
+                                </a>
+                              ) : (
+                                <span>{s.title || s.doc_id}</span>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
             {sending && (
               <div className="flex justify-start">
-                <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-md px-4 py-2 text-sm text-gray-500">
+                <div className="rounded-2xl rounded-bl-md border border-slate-200 bg-white px-4 py-2 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900">
                   답변 작성 중…
                 </div>
               </div>
@@ -169,21 +267,24 @@ function ChatbotPage() {
             <div ref={bottomRef} />
           </div>
 
-          <form onSubmit={handleSubmit} className="p-4 border-t border-gray-100 bg-white rounded-b-lg">
+          <form
+            onSubmit={handleSubmit}
+            className="border-t border-slate-100 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"
+          >
             <div className="flex gap-2">
               <input
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="메시지를 입력하세요"
-                className="flex-1 px-4 py-3 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                className="flex-1 rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
                 disabled={sending}
                 autoComplete="off"
               />
               <button
                 type="submit"
                 disabled={sending || !input.trim()}
-                className="px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                className="shrink-0 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 보내기
               </button>
@@ -194,5 +295,3 @@ function ChatbotPage() {
     </AppLayout>
   );
 }
-
-export default ChatbotPage;

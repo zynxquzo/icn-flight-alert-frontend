@@ -1,26 +1,20 @@
-// src/pages/DashboardPage.jsx
 import { useCallback, useEffect, useState } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import AppLayout from '../components/AppLayout';
+import FlightCard from '../components/FlightCard';
+import RegisterFlightModal from '../components/RegisterFlightModal';
+import FlightDetailsModal from '../components/FlightDetailsModal';
 import {
   fetchFlights,
-  createFlight,
   deleteFlight,
   updateFlightStatus,
   refreshFlight,
 } from '../api/flights';
-import { fetchUserNotifications } from '../api/notifications';
+import { fetchMyNotifications, fetchFlightNotifications } from '../api/notifications';
 import { fetchFlightLogs } from '../api/flightLogs';
 import { getApiErrorMessage } from '../utils/apiError';
-
-const FLIGHT_TYPE_LABEL = {
-  departure: '출발',
-  arrival: '도착',
-};
-
-function normalizeFlightId(value) {
-  return value.trim().toUpperCase().replace(/\s+/g, '');
-}
+import { summarizeRefreshResult } from '../utils/format';
+import { useToast } from '../hooks/useToast';
 
 const NOTIFICATION_TYPES = [
   { value: '', label: '전체' },
@@ -30,37 +24,53 @@ const NOTIFICATION_TYPES = [
   { value: 'terminal_change', label: '터미널 변경' },
 ];
 
-function DashboardPage() {
+const ACTIVE_FILTERS = [
+  { value: '', label: '전체' },
+  { value: 'active', label: '모니터링 중' },
+  { value: 'inactive', label: '비활성' },
+];
+
+function activeParams(filterValue) {
+  if (filterValue === 'active') return { is_active: true };
+  if (filterValue === 'inactive') return { is_active: false };
+  return {};
+}
+
+export default function DashboardPage() {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [flights, setFlights] = useState([]);
   const [listLoading, setListLoading] = useState(true);
   const [listError, setListError] = useState('');
+  const [activeFilter, setActiveFilter] = useState('');
 
   const [notifications, setNotifications] = useState([]);
   const [notifLoading, setNotifLoading] = useState(false);
   const [notifError, setNotifError] = useState('');
   const [notifType, setNotifType] = useState('');
 
-  const [logsFlightPk, setLogsFlightPk] = useState(null);
+  /** 비행편 카드에서 펼친 패널: 변경 이력 또는 이 편 알림 */
+  const [panel, setPanel] = useState(null);
+  const [logChangeType, setLogChangeType] = useState('');
+
   const [flightLogs, setFlightLogs] = useState([]);
   const [logsLoading, setLogsLoading] = useState(false);
   const [logsError, setLogsError] = useState('');
 
-  const [registerOpen, setRegisterOpen] = useState(false);
-  const [flightId, setFlightId] = useState('');
-  const [flightDate, setFlightDate] = useState('');
-  const [flightType, setFlightType] = useState('departure');
-  const [registerError, setRegisterError] = useState('');
-  const [registerSubmitting, setRegisterSubmitting] = useState(false);
-  const [registerSuccess, setRegisterSuccess] = useState('');
+  const [flightNotifs, setFlightNotifs] = useState([]);
+  const [flightNotifsLoading, setFlightNotifsLoading] = useState(false);
+  const [flightNotifsError, setFlightNotifsError] = useState('');
 
   const [actionFlightPk, setActionFlightPk] = useState(null);
+  const [registerOpen, setRegisterOpen] = useState(false);
+  const [detailPk, setDetailPk] = useState(null);
 
   const loadFlights = useCallback(async () => {
     setListError('');
     setListLoading(true);
     try {
-      const data = await fetchFlights();
+      const params = activeParams(activeFilter);
+      const data = await fetchFlights(params);
       setFlights(Array.isArray(data) ? data : []);
     } catch (e) {
       setListError(getApiErrorMessage(e, '비행편 목록을 불러오지 못했습니다.'));
@@ -68,19 +78,19 @@ function DashboardPage() {
     } finally {
       setListLoading(false);
     }
-  }, []);
+  }, [activeFilter]);
 
   useEffect(() => {
     loadFlights();
   }, [loadFlights]);
 
   const loadNotifications = useCallback(async () => {
-    if (!user?.email) return;
+    if (!user) return;
     setNotifError('');
     setNotifLoading(true);
     try {
       const params = notifType ? { notification_type: notifType } : {};
-      const data = await fetchUserNotifications(user.email, params);
+      const data = await fetchMyNotifications(params);
       setNotifications(Array.isArray(data) ? data : []);
     } catch (e) {
       setNotifError(getApiErrorMessage(e, '알림을 불러오지 못했습니다.'));
@@ -88,85 +98,71 @@ function DashboardPage() {
     } finally {
       setNotifLoading(false);
     }
-  }, [user?.email, notifType]);
+  }, [user, notifType]);
 
   useEffect(() => {
     loadNotifications();
   }, [loadNotifications]);
 
-  const toggleFlightLogs = async (flightPk) => {
-    if (logsFlightPk === flightPk) {
-      setLogsFlightPk(null);
-      setFlightLogs([]);
-      setLogsError('');
-      return;
-    }
-    setLogsFlightPk(flightPk);
-    setLogsError('');
+  useEffect(() => {
+    if (!panel || panel.tab !== 'logs') return;
+
+    let cancelled = false;
     setLogsLoading(true);
-    setFlightLogs([]);
-    try {
-      const data = await fetchFlightLogs(flightPk);
-      setFlightLogs(Array.isArray(data) ? data : []);
-    } catch (e) {
-      setLogsError(getApiErrorMessage(e, '변경 이력을 불러오지 못했습니다.'));
-    } finally {
-      setLogsLoading(false);
-    }
-  };
-
-  const openRegister = () => {
-    setRegisterError('');
-    setRegisterSuccess('');
-    const today = new Date();
-    const y = today.getFullYear();
-    const m = String(today.getMonth() + 1).padStart(2, '0');
-    const d = String(today.getDate()).padStart(2, '0');
-    setFlightDate((prev) => prev || `${y}-${m}-${d}`);
-    setRegisterOpen(true);
-  };
-
-  const closeRegister = () => {
-    if (registerSubmitting) return;
-    setRegisterOpen(false);
-    setRegisterError('');
-    setFlightId('');
-  };
-
-  const handleRegisterSubmit = async (e) => {
-    e.preventDefault();
-    setRegisterError('');
-    setRegisterSuccess('');
-
-    const id = normalizeFlightId(flightId);
-    if (id.length < 2 || id.length > 10) {
-      setRegisterError('편명은 2~10자(공백 제외)로 입력해 주세요. 예: KE123');
-      return;
-    }
-    if (!flightDate) {
-      setRegisterError('출발/도착 날짜를 선택해 주세요.');
-      return;
-    }
-
-    setRegisterSubmitting(true);
-    try {
-      await createFlight({
-        flight_id: id,
-        flight_date: flightDate,
-        flight_type: flightType,
+    setLogsError('');
+    const params = logChangeType ? { change_type: logChangeType } : {};
+    fetchFlightLogs(panel.flightPk, params)
+      .then((data) => {
+        if (!cancelled) setFlightLogs(Array.isArray(data) ? data : []);
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          setLogsError(getApiErrorMessage(e, '변경 이력을 불러오지 못했습니다.'));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLogsLoading(false);
       });
-      setRegisterSuccess('비행편이 등록되었습니다. 목록이 곧 갱신됩니다.');
-      setFlightId('');
-      await loadFlights();
-      setTimeout(() => {
-        setRegisterOpen(false);
-        setRegisterSuccess('');
-      }, 800);
-    } catch (err) {
-      setRegisterError(getApiErrorMessage(err, '비행편 등록에 실패했습니다.'));
-    } finally {
-      setRegisterSubmitting(false);
-    }
+    return () => {
+      cancelled = true;
+    };
+  }, [panel, logChangeType]);
+
+  useEffect(() => {
+    if (!panel || panel.tab !== 'notifications') return;
+
+    let cancelled = false;
+    setFlightNotifsLoading(true);
+    setFlightNotifsError('');
+    fetchFlightNotifications(panel.flightPk)
+      .then((data) => {
+        if (!cancelled) setFlightNotifs(Array.isArray(data) ? data : []);
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          setFlightNotifsError(getApiErrorMessage(e, '알림을 불러오지 못했습니다.'));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setFlightNotifsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [panel]);
+
+  const toggleLogs = (flightPk) => {
+    setPanel((p) => {
+      if (p?.flightPk === flightPk && p?.tab === 'logs') return null;
+      return { flightPk, tab: 'logs' };
+    });
+  };
+
+  const toggleFlightNotifs = (flightPk) => {
+    setPanel((p) => {
+      if (p?.flightPk === flightPk && p?.tab === 'notifications') return null;
+      return { flightPk, tab: 'notifications' };
+    });
   };
 
   const handleDelete = async (flightPk) => {
@@ -177,8 +173,10 @@ function DashboardPage() {
     try {
       await deleteFlight(flightPk);
       await loadFlights();
+      showToast('비행편이 삭제되었습니다.', 'success');
+      if (panel?.flightPk === flightPk) setPanel(null);
     } catch (e) {
-      alert(getApiErrorMessage(e, '삭제에 실패했습니다.'));
+      showToast(getApiErrorMessage(e, '삭제에 실패했습니다.'), 'error');
     } finally {
       setActionFlightPk(null);
     }
@@ -189,8 +187,9 @@ function DashboardPage() {
     try {
       await updateFlightStatus(flightPk, nextActive);
       await loadFlights();
+      showToast(nextActive ? '모니터링을 켰습니다.' : '모니터링을 껐습니다.', 'success');
     } catch (e) {
-      alert(getApiErrorMessage(e, '상태 변경에 실패했습니다.'));
+      showToast(getApiErrorMessage(e, '상태 변경에 실패했습니다.'), 'error');
     } finally {
       setActionFlightPk(null);
     }
@@ -201,11 +200,10 @@ function DashboardPage() {
     try {
       const result = await refreshFlight(flightPk);
       await loadFlights();
-      if (import.meta.env.DEV && result != null) {
-        console.debug('refreshFlight', result);
-      }
+      await loadNotifications();
+      showToast(summarizeRefreshResult(result), result?.changes_detected ? 'info' : 'success');
     } catch (e) {
-      alert(getApiErrorMessage(e, '갱신에 실패했습니다.'));
+      showToast(getApiErrorMessage(e, '갱신에 실패했습니다.'), 'error');
     } finally {
       setActionFlightPk(null);
     }
@@ -213,167 +211,102 @@ function DashboardPage() {
 
   return (
     <AppLayout>
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-            <h2 className="text-2xl font-bold text-gray-800">내 비행편</h2>
-            <button
-              type="button"
-              onClick={openRegister}
-              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition font-medium shrink-0"
-            >
-              ➕ 비행편 등록
-            </button>
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
+          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">내 비행편</h2>
+            <div className="flex flex-wrap items-center gap-3">
+              <label htmlFor="active-filter" className="text-sm text-slate-600 dark:text-slate-400">
+                상태
+              </label>
+              <select
+                id="active-filter"
+                value={activeFilter}
+                onChange={(e) => setActiveFilter(e.target.value)}
+                className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+              >
+                {ACTIVE_FILTERS.map((f) => (
+                  <option key={f.value || 'all'} value={f.value}>
+                    {f.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => setRegisterOpen(true)}
+                className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+              >
+                비행편 등록
+              </button>
+            </div>
           </div>
 
           {listError && (
-            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
               {listError}
             </div>
           )}
 
           {listLoading ? (
-            <p className="text-gray-600">불러오는 중...</p>
+            <p className="text-slate-600 dark:text-slate-400">불러오는 중...</p>
           ) : flights.length === 0 ? (
-            <p className="text-gray-600 mb-4">
-              등록된 비행편이 없습니다. 상단의 비행편 등록으로 추가해 주세요.
+            <p className="mb-4 text-slate-600 dark:text-slate-400">
+              등록된 비행편이 없습니다. 상단에서 비행편을 등록해 주세요.
             </p>
           ) : (
             <ul className="space-y-4">
               {flights.map((f) => {
                 const busy = actionFlightPk === f.flight_pk;
-                const typeLabel = FLIGHT_TYPE_LABEL[f.flight_type] || f.flight_type;
                 return (
-                  <li
+                  <FlightCard
                     key={f.flight_pk}
-                    className="border border-gray-200 rounded-lg p-4 flex flex-col gap-4"
-                  >
-                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <span className="text-lg font-semibold text-gray-900">
-                          {f.flight_id || '—'}
-                        </span>
-                        <span className="text-sm px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">
-                          {typeLabel}
-                        </span>
-                        <span
-                          className={`text-sm px-2 py-0.5 rounded-full ${
-                            f.is_active
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-gray-200 text-gray-600'
-                          }`}
-                        >
-                          {f.is_active ? '모니터링 중' : '비활성'}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-600">
-                        {f.flight_date} · {f.airline || '항공사 정보 대기'}
-                        {f.airport ? ` · ${f.airport}` : ''}
-                      </p>
-                      <p className="text-sm text-gray-500 mt-1">
-                        게이트: {f.gate_number ?? '—'} · 예정:{' '}
-                        {f.schedule_date_time ?? '—'} · 추정:{' '}
-                        {f.estimated_date_time ?? '—'}
-                        {f.remark ? ` · ${f.remark}` : ''}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2 shrink-0">
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => toggleFlightLogs(f.flight_pk)}
-                        className="px-3 py-2 text-sm bg-slate-50 text-slate-700 hover:bg-slate-100 rounded-lg disabled:opacity-50"
-                      >
-                        {logsFlightPk === f.flight_pk ? '이력 닫기' : '변경 이력'}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => handleRefresh(f.flight_pk)}
-                        className="px-3 py-2 text-sm bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg disabled:opacity-50"
-                      >
-                        정보 갱신
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => handleToggleActive(f.flight_pk, !f.is_active)}
-                        className="px-3 py-2 text-sm bg-amber-50 text-amber-800 hover:bg-amber-100 rounded-lg disabled:opacity-50"
-                      >
-                        {f.is_active ? '모니터링 끄기' : '모니터링 켜기'}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => handleDelete(f.flight_pk)}
-                        className="px-3 py-2 text-sm bg-red-50 text-red-700 hover:bg-red-100 rounded-lg disabled:opacity-50"
-                      >
-                        삭제
-                      </button>
-                    </div>
-                    </div>
-                    {logsFlightPk === f.flight_pk && (
-                      <div className="w-full border-t border-gray-100 pt-3">
-                        {logsLoading ? (
-                          <p className="text-sm text-gray-500">이력 불러오는 중…</p>
-                        ) : logsError ? (
-                          <p className="text-sm text-red-600">{logsError}</p>
-                        ) : flightLogs.length === 0 ? (
-                          <p className="text-sm text-gray-500">저장된 변경 이력이 없습니다.</p>
-                        ) : (
-                          <ul className="space-y-2 text-sm max-h-48 overflow-y-auto">
-                            {flightLogs.map((log) => (
-                              <li
-                                key={log.log_id}
-                                className="bg-gray-50 rounded-lg px-3 py-2 border border-gray-100"
-                              >
-                                <span className="font-medium text-gray-800">
-                                  {log.change_type || '변경'}
-                                </span>
-                                <span className="text-gray-500 ml-2">
-                                  {log.detected_at
-                                    ? new Date(log.detected_at).toLocaleString('ko-KR')
-                                    : ''}
-                                </span>
-                                <p className="text-gray-600 mt-1">
-                                  게이트 {log.gate_number ?? '—'} · 터미널 {log.terminal_id ?? '—'} ·
-                                  비고 {log.remark ?? '—'}
-                                </p>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                    )}
-                  </li>
+                    flight={f}
+                    busy={busy}
+                    panel={panel}
+                    logChangeType={logChangeType}
+                    onLogChangeTypeChange={setLogChangeType}
+                    flightLogs={flightLogs}
+                    logsLoading={logsLoading}
+                    logsError={logsError}
+                    flightNotifs={flightNotifs}
+                    flightNotifsLoading={flightNotifsLoading}
+                    flightNotifsError={flightNotifsError}
+                    onToggleLogs={toggleLogs}
+                    onToggleFlightNotifs={toggleFlightNotifs}
+                    onRefresh={handleRefresh}
+                    onToggleActive={handleToggleActive}
+                    onDelete={handleDelete}
+                    onOpenDetails={setDetailPk}
+                  />
                 );
               })}
             </ul>
           )}
         </div>
 
-        <div className="mt-8 bg-white rounded-lg shadow p-6">
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-4">
+        <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
+          <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="text-xl font-bold text-gray-800">내 알림</h2>
-              <p className="text-sm text-gray-600 mt-1">
-                <code className="text-xs bg-gray-100 px-1 rounded">GET /notifications</code> —
-                등록한 비행편에서 발송·기록된 알림입니다.
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">내 알림</h2>
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                <code className="rounded bg-slate-100 px-1 text-xs dark:bg-slate-800">
+                  GET /notifications
+                </code>{' '}
+                — JWT 기준으로 등록한 비행편의 알림입니다.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <label htmlFor="notif-type" className="text-sm text-gray-600">
+              <label htmlFor="notif-type" className="text-sm text-slate-600 dark:text-slate-400">
                 유형
               </label>
               <select
                 id="notif-type"
                 value={notifType}
                 onChange={(e) => setNotifType(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
               >
                 {NOTIFICATION_TYPES.map((t) => (
-                  <option key={t.value || 'all'} value={t.value}>
+                  <option key={t.value === '' ? 'all' : t.value} value={t.value}>
                     {t.label}
                   </option>
                 ))}
@@ -381,44 +314,54 @@ function DashboardPage() {
               <button
                 type="button"
                 onClick={loadNotifications}
-                className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg"
+                className="rounded-xl bg-slate-100 px-3 py-2 text-sm hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700"
               >
                 새로고침
               </button>
             </div>
           </div>
           {notifError && (
-            <div className="mb-3 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm">
+            <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
               {notifError}
             </div>
           )}
           {notifLoading ? (
-            <p className="text-gray-600 text-sm">불러오는 중…</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400">불러오는 중…</p>
           ) : notifications.length === 0 ? (
-            <p className="text-gray-600 text-sm">알림이 없습니다.</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400">알림이 없습니다.</p>
           ) : (
-            <ul className="divide-y divide-gray-100 border border-gray-100 rounded-lg overflow-hidden">
+            <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-100 dark:divide-slate-800 dark:border-slate-800">
               {notifications.map((n) => (
-                <li key={n.notification_id} className="px-4 py-3 bg-white hover:bg-gray-50/80">
+                <li
+                  key={n.notification_id}
+                  className="bg-white px-4 py-3 hover:bg-slate-50/80 dark:bg-slate-900 dark:hover:bg-slate-800/80"
+                >
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-medium px-2 py-0.5 rounded bg-purple-100 text-purple-800">
+                    <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800 dark:bg-purple-900/50 dark:text-purple-200">
                       {n.notification_type}
                     </span>
-                    <span className="text-xs text-gray-500">비행편 #{n.flight_pk}</span>
+                    <span className="text-xs text-slate-500">비행편 #{n.flight_pk}</span>
                     <span
-                      className={`text-xs ${n.is_sent ? 'text-green-600' : 'text-amber-600'}`}
+                      className={`text-xs ${n.is_sent ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}
                     >
                       {n.is_sent ? '발송됨' : '미발송'}
                     </span>
                     {n.sent_at && (
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-slate-400">
                         {new Date(n.sent_at).toLocaleString('ko-KR')}
                       </span>
                     )}
                   </div>
-                  {n.message && <p className="text-sm text-gray-700 mt-1">{n.message}</p>}
+                  {n.message && (
+                    <p className="mt-1 text-sm text-slate-700 dark:text-slate-200">{n.message}</p>
+                  )}
+                  {n.sent_to && (
+                    <p className="text-xs text-slate-500">수신: {n.sent_to}</p>
+                  )}
                   {n.error_message && (
-                    <p className="text-xs text-red-600 mt-1">오류: {n.error_message}</p>
+                    <p className="mt-1 text-xs text-red-600 dark:text-red-400">
+                      오류: {n.error_message}
+                    </p>
                   )}
                 </li>
               ))}
@@ -426,128 +369,31 @@ function DashboardPage() {
           )}
         </div>
 
-        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <p className="text-blue-800 text-sm">
-            인천공항 OpenAPI와 연동되어 등록 시 실제 운항 정보가 채워지며, 스케줄러가 주기적으로
-            상태를 확인합니다. 백엔드는{' '}
-            <code className="text-blue-900 bg-blue-100/80 px-1 rounded">localhost:8000</code>
-            에서 실행되어야 합니다.
+        <div className="mt-6 rounded-xl border border-indigo-200 bg-indigo-50/80 p-4 dark:border-indigo-900 dark:bg-indigo-950/40">
+          <p className="text-sm text-indigo-900 dark:text-indigo-100">
+            인천공항 OpenAPI와 연동되어 등록 시 실제 운항 정보가 채워지며, 스케줄러가 주기적으로 상태를
+            확인합니다. API 주소는 환경 변수{' '}
+            <code className="rounded bg-white/80 px-1 dark:bg-slate-900">VITE_API_BASE_URL</code>로
+            설정합니다.
           </p>
         </div>
       </main>
 
-      {/* 비행편 등록 모달 */}
-      {registerOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="register-flight-title"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) closeRegister();
-          }}
-        >
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-100">
-              <h3 id="register-flight-title" className="text-xl font-bold text-gray-900">
-                비행편 등록
-              </h3>
-              <p className="text-sm text-gray-600 mt-1">
-                백엔드 <code className="text-xs bg-gray-100 px-1 rounded">POST /flights</code>와
-                동일합니다. 편명·날짜·출발/도착을 입력하면 로그인한 계정에 연결됩니다.
-              </p>
-            </div>
-            <form onSubmit={handleRegisterSubmit} className="p-6 space-y-4">
-              {registerError && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm">
-                  {registerError}
-                </div>
-              )}
-              {registerSuccess && (
-                <div className="bg-green-50 border border-green-200 text-green-800 px-3 py-2 rounded-lg text-sm">
-                  {registerSuccess}
-                </div>
-              )}
-
-              <div>
-                <label htmlFor="reg-flight-id" className="block text-sm font-medium text-gray-700 mb-1">
-                  항공편명 <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="reg-flight-id"
-                  type="text"
-                  value={flightId}
-                  onChange={(e) => setFlightId(e.target.value)}
-                  placeholder="예: KE123"
-                  autoComplete="off"
-                  maxLength={10}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none uppercase"
-                />
-                <p className="text-xs text-gray-500 mt-1">2~10자, 저장 시 공백 제거·대문자 변환</p>
-              </div>
-
-              <div>
-                <label htmlFor="reg-flight-date" className="block text-sm font-medium text-gray-700 mb-1">
-                  출발/도착 날짜 <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="reg-flight-date"
-                  type="date"
-                  value={flightDate}
-                  onChange={(e) => setFlightDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                />
-              </div>
-
-              <fieldset>
-                <legend className="block text-sm font-medium text-gray-700 mb-2">구분</legend>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="flight_type"
-                      value="departure"
-                      checked={flightType === 'departure'}
-                      onChange={() => setFlightType('departure')}
-                    />
-                    <span className="text-gray-800">출발 (departure)</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="flight_type"
-                      value="arrival"
-                      checked={flightType === 'arrival'}
-                      onChange={() => setFlightType('arrival')}
-                    />
-                    <span className="text-gray-800">도착 (arrival)</span>
-                  </label>
-                </div>
-              </fieldset>
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={closeRegister}
-                  disabled={registerSubmitting}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                >
-                  취소
-                </button>
-                <button
-                  type="submit"
-                  disabled={registerSubmitting}
-                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium disabled:opacity-50"
-                >
-                  {registerSubmitting ? '등록 중...' : '등록하기'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+      <RegisterFlightModal
+        open={registerOpen}
+        onClose={() => setRegisterOpen(false)}
+        onRegistered={() => {
+          loadFlights();
+          loadNotifications();
+        }}
+      />
+      {detailPk != null && (
+        <FlightDetailsModal
+          key={String(detailPk)}
+          flightPk={detailPk}
+          onClose={() => setDetailPk(null)}
+        />
       )}
     </AppLayout>
   );
 }
-
-export default DashboardPage;
