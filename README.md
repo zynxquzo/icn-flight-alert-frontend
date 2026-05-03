@@ -105,16 +105,33 @@ Fast Refresh(`eslint-plugin-react-refresh`)과 맞추기 위해 **Context 객체
 
 ## 📸 UI 스크린샷
 
-스크린샷은 `docs/screenshots/` 에 두면 README 미리보기에 표시됩니다. (저장소에 없을 경우 깨진 이미지로 보일 수 있습니다.)
+### 1. 로그인
 
-| 순서 | 화면 설명 |
-|:---:|:---|
-| 1 | 로그인 |
-| 2 | 회원가입 |
-| 3 | 대시보드 (빈 상태) |
-| 4 | 비행편 등록 모달 |
-| 5 | 대시보드 목록·필터·상세·이력·알림 |
-| 6 | 공항 챗봇 (mode·sources) |
+![로그인 화면](docs/screenshots/01-login.png)
+
+### 2. 회원가입
+
+![회원가입 화면](docs/screenshots/02-signup.png)
+
+### 3. 대시보드 (빈 상태)
+
+![대시보드 빈 상태](docs/screenshots/03-dashboard-empty.png)
+
+### 4. 비행편 등록 모달
+
+![비행편 등록 모달](docs/screenshots/04-register-modal.png)
+
+### 5. 대시보드 — 비행편 목록
+
+![대시보드 비행편 목록](docs/screenshots/05-dashboard-flights.png)
+
+### 6. 대시보드 — 변경 이력·알림
+
+![대시보드 변경 이력 및 알림](docs/screenshots/06-dashboard-logs-notifications.png)
+
+### 7. 공항 안내 챗봇 (mode·sources)
+
+![공항 안내 챗봇](docs/screenshots/07-chatbot.png)
 
 ---
 
