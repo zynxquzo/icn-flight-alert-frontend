@@ -41,6 +41,11 @@
 
 * **소개**: `GET /chatbot` — 기능 태그, 접기 가능한 `env` 안내
 * **대화**: `POST /chatbot/chat` — 응답의 **mode**(LEGACY/RAG/AGENT) 뱃지, **sources** 링크 표시
+* **대화·설정 유지 (세션·탭 단위)**: [`ChatbotPage`](src/pages/ChatbotPage.jsx)에서 대화 목록, 터미널, 대기 시간 입력값을 **`sessionStorage`**에 저장합니다.
+  * 같은 **탭**에서 **새로고침**해도 위 내용이 복구됩니다.
+  * **탭 또는 창을 닫으면** 브라우저가 `sessionStorage`를 비우므로 대화도 초기화됩니다 (서버에 영구 저장하지 않음).
+  * 마지막 저장 시각 기준 **약 30분** 동안 메시지나 설정에 변화가 없으면 저장소와 화면이 초기화됩니다. 열린 탭에서는 주기적으로(기본 1분 간격) 만료 여부를 검사합니다.
+  * 상수: `CHATBOT_SESSION_IDLE_MS`(무활동 만료), `IDLE_CHECK_MS`(만료 검사 주기) — 필요 시 [`ChatbotPage.jsx`](src/pages/ChatbotPage.jsx) 상단에서 조정합니다.
 
 ### 🧭 공통 UI
 

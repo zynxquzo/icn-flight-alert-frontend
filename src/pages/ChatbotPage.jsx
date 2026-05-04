@@ -4,6 +4,67 @@ import Badge from '../components/Badge';
 import { fetchChatbotInfo, sendChatMessage } from '../api/chatbot';
 import { getApiErrorMessage } from '../utils/apiError';
 
+/** 같은 탭에서만 유지. 탭을 닫으면 브라우저가 sessionStorage를 비움 */
+const CHATBOT_SESSION_KEY = 'icn-flight-alert-chatbot';
+const CHATBOT_SESSION_VERSION = 1;
+/** 마지막 저장 이후 이 시간이 지나면 대화·설정 초기화 */
+const CHATBOT_SESSION_IDLE_MS = 30 * 60 * 1000;
+const IDLE_CHECK_MS = 60 * 1000;
+
+function loadChatbotSession() {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = sessionStorage.getItem(CHATBOT_SESSION_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (data?.v !== CHATBOT_SESSION_VERSION || !Array.isArray(data.messages)) {
+      sessionStorage.removeItem(CHATBOT_SESSION_KEY);
+      return null;
+    }
+    const updatedAt = typeof data.updatedAt === 'number' ? data.updatedAt : 0;
+    if (Date.now() - updatedAt > CHATBOT_SESSION_IDLE_MS) {
+      sessionStorage.removeItem(CHATBOT_SESSION_KEY);
+      return null;
+    }
+    return {
+      terminal: typeof data.terminal === 'string' ? data.terminal : 'T1',
+      waitHours: typeof data.waitHours === 'string' ? data.waitHours : '',
+      messages: data.messages,
+      updatedAt,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function persistChatbotSession(terminal, waitHours, messages) {
+  if (typeof window === 'undefined') return Date.now();
+  const now = Date.now();
+  try {
+    sessionStorage.setItem(
+      CHATBOT_SESSION_KEY,
+      JSON.stringify({
+        v: CHATBOT_SESSION_VERSION,
+        updatedAt: now,
+        terminal,
+        waitHours,
+        messages,
+      }),
+    );
+  } catch {
+    // 저장 공간 부족·비공개 모드 등
+  }
+  return now;
+}
+
+function clearChatbotSessionStorage() {
+  try {
+    sessionStorage.removeItem(CHATBOT_SESSION_KEY);
+  } catch {
+    // ignore
+  }
+}
+
 const TERMINALS = [
   { value: 'T1', label: '제1여객터미널 (T1)' },
   { value: 'T2', label: '제2여객터미널 (T2)' },
@@ -34,15 +95,33 @@ function modeLabel(mode) {
   return 'LEGACY';
 }
 
+function getInitialChatbotSessionState() {
+  const s = loadChatbotSession();
+  return {
+    terminal: s?.terminal ?? 'T1',
+    waitHours: s?.waitHours ?? '',
+    messages: s?.messages ?? [],
+    persistedAt: s?.updatedAt ?? Date.now(),
+  };
+}
+
 export default function ChatbotPage() {
+  const initialSessionRef = useRef(null);
+  if (initialSessionRef.current === null) {
+    initialSessionRef.current = getInitialChatbotSessionState();
+  }
+  const initial = initialSessionRef.current;
+
   const [info, setInfo] = useState(null);
   const [infoError, setInfoError] = useState('');
-  const [terminal, setTerminal] = useState('T1');
-  const [waitHours, setWaitHours] = useState('');
+  const [terminal, setTerminal] = useState(initial.terminal);
+  const [waitHours, setWaitHours] = useState(initial.waitHours);
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState(initial.messages);
   const [sending, setSending] = useState(false);
   const bottomRef = useRef(null);
+  const lastPersistedAtRef = useRef(initial.persistedAt);
+  const skipInitialPersistRef = useRef(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -57,6 +136,27 @@ export default function ChatbotPage() {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  useEffect(() => {
+    if (skipInitialPersistRef.current) {
+      skipInitialPersistRef.current = false;
+      return;
+    }
+    const now = persistChatbotSession(terminal, waitHours, messages);
+    lastPersistedAtRef.current = now;
+  }, [terminal, waitHours, messages]);
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      if (Date.now() - lastPersistedAtRef.current < CHATBOT_SESSION_IDLE_MS) return;
+      clearChatbotSessionStorage();
+      lastPersistedAtRef.current = Date.now();
+      setMessages([]);
+      setTerminal('T1');
+      setWaitHours('');
+    }, IDLE_CHECK_MS);
+    return () => window.clearInterval(id);
   }, []);
 
   useEffect(() => {
@@ -200,6 +300,9 @@ export default function ChatbotPage() {
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-500">
               대기 시간을 넣으면 그에 맞춘 추천에 도움이 됩니다. 비워 두면 일반 질문만 전달됩니다.
+            </p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">
+              이 탭에서만 대화가 저장됩니다. 탭을 닫거나 {CHATBOT_SESSION_IDLE_MS / 60000}분 동안 변화가 없으면 대화가 초기화됩니다.
             </p>
           </div>
 
