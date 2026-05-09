@@ -24,8 +24,8 @@ function SignupPage() {
       return;
     }
 
-    if (password.length < 6) {
-      setError('비밀번호는 최소 6자 이상이어야 합니다.');
+    if (password.length < 8) {
+      setError('비밀번호는 최소 8자 이상이어야 합니다.');
       return;
     }
 
@@ -34,8 +34,13 @@ function SignupPage() {
     const result = await signup(email, password);
 
     if (result.success) {
-      showToast('회원가입이 완료되었습니다. 로그인해 주세요.', 'success');
-      navigate('/login');
+      if (result.autoLogin) {
+        showToast('회원가입이 완료되었습니다. 환영합니다!', 'success');
+        navigate('/dashboard');
+      } else {
+        showToast('회원가입이 완료되었습니다. 로그인해 주세요.', 'success');
+        navigate('/login');
+      }
     } else {
       setError(result.error);
     }
@@ -85,7 +90,7 @@ function SignupPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                placeholder="최소 6자 이상"
+                placeholder="최소 8자 이상"
                 className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 pr-24 outline-none transition focus:ring-2 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
               />
               <button

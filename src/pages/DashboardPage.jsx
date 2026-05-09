@@ -13,7 +13,7 @@ import {
 import { fetchMyNotifications, fetchFlightNotifications } from '../api/notifications';
 import { fetchFlightLogs } from '../api/flightLogs';
 import { getApiErrorMessage } from '../utils/apiError';
-import { summarizeRefreshResult } from '../utils/format';
+import { notificationTypeLabel, summarizeRefreshResult } from '../utils/format';
 import { useToast } from '../hooks/useToast';
 
 const NOTIFICATION_TYPES = [
@@ -338,7 +338,7 @@ export default function DashboardPage() {
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800 dark:bg-purple-900/50 dark:text-purple-200">
-                      {n.notification_type}
+                      {notificationTypeLabel(n.notification_type)}
                     </span>
                     <span className="text-xs text-slate-500">비행편 #{n.flight_pk}</span>
                     <span

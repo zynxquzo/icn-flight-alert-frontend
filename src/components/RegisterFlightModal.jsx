@@ -48,17 +48,31 @@ export default function RegisterFlightModal({ open, onClose, onRegistered }) {
 
     setRegisterSubmitting(true);
     try {
-      await createFlight({
+      const created = await createFlight({
         flight_id: id,
         flight_date: flightDate,
         flight_type: flightType,
       });
-      setRegisterSuccess('비행편이 등록되었습니다.');
+      // 백엔드가 인천공항 OpenAPI에서 정보를 보강하지 못한 경우 enriched=false.
+      // (구버전 백엔드 호환을 위해 airline/schedule_date_time도 함께 검사)
+      const apiEnriched =
+        created?.enriched !== false &&
+        (created?.airline || created?.schedule_date_time);
+      if (apiEnriched) {
+        setRegisterSuccess('비행편이 등록되었습니다.');
+      } else {
+        setRegisterSuccess(
+          '비행편이 등록되었지만 인천공항 API에서 정보를 가져오지 못했습니다. 편명·날짜·구분이 정확한지 확인하고, 잠시 후 카드의 [정보 갱신]을 눌러 주세요.',
+        );
+      }
       setFlightId('');
       onRegistered?.();
-      setTimeout(() => {
-        closeRegister();
-      }, 700);
+      setTimeout(
+        () => {
+          closeRegister();
+        },
+        apiEnriched ? 700 : 2500,
+      );
     } catch (err) {
       setRegisterError(getApiErrorMessage(err, '비행편 등록에 실패했습니다.'));
     } finally {
