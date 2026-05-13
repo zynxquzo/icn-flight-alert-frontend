@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import AppLayout from '../components/AppLayout';
 import FlightCard from '../components/FlightCard';
 import RegisterFlightModal from '../components/RegisterFlightModal';
 import FlightDetailsModal from '../components/FlightDetailsModal';
+import { useI18n } from '../context/I18nContext';
 import {
   fetchFlights,
   deleteFlight,
@@ -13,7 +14,7 @@ import {
 import { fetchMyNotifications, fetchFlightNotifications } from '../api/notifications';
 import { fetchFlightLogs } from '../api/flightLogs';
 import { getApiErrorMessage } from '../utils/apiError';
-import { notificationTypeLabel, summarizeRefreshResult } from '../utils/format';
+import { notificationTypeLabel, summarizeRefreshResult, shouldPollFlightSoon } from '../utils/format';
 import { useToast } from '../hooks/useToast';
 
 const NOTIFICATION_TYPES = [
@@ -37,7 +38,8 @@ function activeParams(filterValue) {
 }
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, resendVerification } = useAuth();
+  const { t } = useI18n();
   const { showToast } = useToast();
   const [flights, setFlights] = useState([]);
   const [listLoading, setListLoading] = useState(true);
@@ -64,6 +66,7 @@ export default function DashboardPage() {
   const [actionFlightPk, setActionFlightPk] = useState(null);
   const [registerOpen, setRegisterOpen] = useState(false);
   const [detailPk, setDetailPk] = useState(null);
+  const [resendBusy, setResendBusy] = useState(false);
 
   const loadFlights = useCallback(async () => {
     setListError('');
@@ -83,6 +86,16 @@ export default function DashboardPage() {
   useEffect(() => {
     loadFlights();
   }, [loadFlights]);
+
+  const hasImminentPoll = useMemo(() => flights.some(shouldPollFlightSoon), [flights]);
+
+  useEffect(() => {
+    if (!hasImminentPoll) return undefined;
+    const id = window.setInterval(() => {
+      void loadFlights();
+    }, 90_000);
+    return () => window.clearInterval(id);
+  }, [hasImminentPoll, loadFlights]);
 
   const loadNotifications = useCallback(async () => {
     if (!user) return;
@@ -212,9 +225,38 @@ export default function DashboardPage() {
   return (
     <AppLayout>
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        {user && user.email_verified === false && (
+          <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50/90 p-4 dark:border-amber-900 dark:bg-amber-950/40 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-amber-950 dark:text-amber-100">
+              이메일 인증이 완료되지 않았습니다. 받은 편지함(스팸함 포함)의 링크를 확인하거나 재발송해 주세요.
+            </p>
+            <button
+              type="button"
+              disabled={resendBusy}
+              onClick={async () => {
+                setResendBusy(true);
+                const r = await resendVerification();
+                setResendBusy(false);
+                showToast(
+                  r.success ? '인증 메일을 보냈습니다.' : r.error,
+                  r.success ? 'success' : 'error',
+                );
+              }}
+              className="shrink-0 rounded-xl bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50"
+            >
+              {resendBusy ? '발송 중…' : '인증 메일 재발송'}
+            </button>
+          </div>
+        )}
+
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
           <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">내 비행편</h2>
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{t('dashboard.flightsTitle')}</h2>
+              {hasImminentPoll && (
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t('dashboard.imminentHint')}</p>
+              )}
+            </div>
             <div className="flex flex-wrap items-center gap-3">
               <label htmlFor="active-filter" className="text-sm text-slate-600 dark:text-slate-400">
                 상태

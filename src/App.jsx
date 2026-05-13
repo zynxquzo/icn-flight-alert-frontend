@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
+import { I18nProvider } from './context/I18nContext';
 import { AuthProvider } from './context/AuthContext';
 import { useAuth } from './hooks/useAuth';
 import { ToastProvider } from './context/ToastContext';
@@ -7,6 +8,9 @@ import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import DashboardPage from './pages/DashboardPage';
 import ChatbotPage from './pages/ChatbotPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import VerifyEmailPage from './pages/VerifyEmailPage';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -40,6 +44,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/login" />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route
         path="/login"
         element={
@@ -53,6 +58,22 @@ function AppRoutes() {
         element={
           <PublicRoute>
             <SignupPage />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/forgot-password"
+        element={
+          <PublicRoute>
+            <ForgotPasswordPage />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/reset-password"
+        element={
+          <PublicRoute>
+            <ResetPasswordPage />
           </PublicRoute>
         }
       />
@@ -79,13 +100,15 @@ function AppRoutes() {
 export default function App() {
   return (
     <BrowserRouter>
-      <ThemeProvider>
-        <AuthProvider>
-          <ToastProvider>
-            <AppRoutes />
-          </ToastProvider>
-        </AuthProvider>
-      </ThemeProvider>
+      <I18nProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <ToastProvider>
+              <AppRoutes />
+            </ToastProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </I18nProvider>
     </BrowserRouter>
   );
 }

@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
+import { useI18n } from '../context/I18nContext';
 
 const navClass = ({ isActive }) =>
   `px-3 py-2 rounded-xl text-sm font-medium transition ${
@@ -12,6 +13,7 @@ const navClass = ({ isActive }) =>
 function AppLayout({ children }) {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { lang, setLang, t } = useI18n();
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
@@ -21,24 +23,50 @@ function AppLayout({ children }) {
             <div className="flex flex-wrap items-center gap-2 sm:gap-4">
               <div className="mr-2 flex items-center">
                 <span className="mr-2 text-2xl">✈️</span>
-                <span className="text-xl font-bold text-slate-900 dark:text-white">ICN Flight Alert</span>
+                <span className="text-xl font-bold text-slate-900 dark:text-white">{t('brand')}</span>
               </div>
               <div className="flex items-center gap-1">
                 <NavLink to="/dashboard" className={navClass} end>
-                  대시보드
+                  {t('nav.dashboard')}
                 </NavLink>
                 <NavLink to="/chatbot" className={navClass}>
-                  공항 챗봇
+                  {t('nav.chatbot')}
                 </NavLink>
               </div>
             </div>
-            <div className="flex items-center gap-2 sm:space-x-3">
+            <div className="flex flex-wrap items-center gap-2 sm:space-x-3">
+              <div className="flex items-center gap-1 rounded-xl border border-slate-200 p-0.5 dark:border-slate-600">
+                <button
+                  type="button"
+                  onClick={() => setLang('ko')}
+                  className={`rounded-lg px-2 py-1 text-xs font-medium ${
+                    lang === 'ko'
+                      ? 'bg-indigo-100 text-indigo-900 dark:bg-indigo-900/60 dark:text-indigo-100'
+                      : 'text-slate-600 dark:text-slate-400'
+                  }`}
+                  aria-pressed={lang === 'ko'}
+                >
+                  KO
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLang('en')}
+                  className={`rounded-lg px-2 py-1 text-xs font-medium ${
+                    lang === 'en'
+                      ? 'bg-indigo-100 text-indigo-900 dark:bg-indigo-900/60 dark:text-indigo-100'
+                      : 'text-slate-600 dark:text-slate-400'
+                  }`}
+                  aria-pressed={lang === 'en'}
+                >
+                  EN
+                </button>
+              </div>
               <button
                 type="button"
                 onClick={toggleTheme}
                 className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
-                title={theme === 'dark' ? '라이트 모드' : '다크 모드'}
-                aria-label={theme === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환'}
+                title={theme === 'dark' ? t('theme.toLight') : t('theme.toDark')}
+                aria-label={theme === 'dark' ? t('theme.toLight') : t('theme.toDark')}
               >
                 {theme === 'dark' ? '☀️' : '🌙'}
               </button>
@@ -50,7 +78,7 @@ function AppLayout({ children }) {
                 onClick={() => void logout()}
                 className="shrink-0 rounded-xl bg-red-500 px-4 py-2 text-sm text-white transition hover:bg-red-600"
               >
-                로그아웃
+                {t('nav.logout')}
               </button>
             </div>
           </div>

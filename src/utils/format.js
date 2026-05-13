@@ -64,3 +64,40 @@ export function summarizeRefreshResult(result) {
   const extra = changes.length > 5 ? ` …외 ${changes.length - 5}건` : '';
   return `변경 ${changes.length}건 감지: ${parts.join('; ')}${extra}`;
 }
+
+/** YYYYMMDDHHmm → Date (로컬 달력 기준) */
+export function parseIncheonDateTimeToDate(s) {
+  if (s == null || s === '') return null;
+  const str = String(s);
+  if (str.length < 12) return null;
+  const y = Number(str.slice(0, 4));
+  const M = Number(str.slice(4, 6)) - 1;
+  const d = Number(str.slice(6, 8));
+  const h = Number(str.slice(8, 10));
+  const m = Number(str.slice(10, 12));
+  if ([y, M, d, h, m].some((n) => Number.isNaN(n))) return null;
+  return new Date(y, M, d, h, m, 0, 0);
+}
+
+/** 출발(또는 예정)까지 남은 시간(시간). 과거·파싱 실패 시 null */
+export function estimateWaitHoursUntilSchedule(scheduleStr, estimatedStr) {
+  const primary = estimatedStr && String(estimatedStr).length >= 12 ? estimatedStr : scheduleStr;
+  const d = parseIncheonDateTimeToDate(primary);
+  if (!d) return null;
+  return (d.getTime() - Date.now()) / (1000 * 60 * 60);
+}
+
+/** 챗봇 터미널 선택값 T1 / T2 */
+export function terminalForChatOption(terminalId) {
+  const raw = String(terminalId || '').toUpperCase();
+  if (raw.includes('T2') || raw === '2') return 'T2';
+  return 'T1';
+}
+
+/** 활성 비행편이 곧 출발(3시간 이내)이면 스케줄러 주기 외 폴링에 사용 */
+export function shouldPollFlightSoon(flight) {
+  if (!flight?.is_active) return false;
+  const h = estimateWaitHoursUntilSchedule(flight.schedule_date_time, flight.estimated_date_time);
+  if (h == null) return false;
+  return h > 0 && h <= 3;
+}

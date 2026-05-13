@@ -1,9 +1,16 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import Modal from './Modal';
 import Spinner from './Spinner';
 import { fetchFlightDetail } from '../api/flights';
 import { getApiErrorMessage } from '../utils/apiError';
-import { flightTypeLabel, formatIncheonDateTime, formatIsoDateTime } from '../utils/format';
+import {
+  flightTypeLabel,
+  formatIncheonDateTime,
+  formatIsoDateTime,
+  estimateWaitHoursUntilSchedule,
+  terminalForChatOption,
+} from '../utils/format';
 
 /**
  * 부모는 detailPk가 있을 때만 마운트하고, 편이 바뀌면 key로 리마운트해 로딩 초기 상태를 맞춥니다.
@@ -67,6 +74,28 @@ export default function FlightDetailsModal({ flightPk, onClose }) {
           {row('등록일', formatIsoDateTime(detail.created_at))}
           {row('마지막 갱신', formatIsoDateTime(detail.last_checked_at))}
           {row('사용자 이메일', detail.user_email)}
+          <div className="pt-4">
+            {(() => {
+              const term = terminalForChatOption(detail.terminal_id);
+              const waitH = estimateWaitHoursUntilSchedule(
+                detail.schedule_date_time,
+                detail.estimated_date_time,
+              );
+              const waitParam =
+                waitH != null && waitH > 0 && waitH <= 48
+                  ? `&wait=${encodeURIComponent(String(Math.round(waitH * 4) / 4))}`
+                  : '';
+              const to = `/chatbot?terminal=${encodeURIComponent(term)}${waitParam}`;
+              return (
+                <Link
+                  to={to}
+                  className="inline-flex w-full items-center justify-center rounded-xl bg-indigo-600 px-4 py-3 text-center text-sm font-medium text-white hover:bg-indigo-700 sm:w-auto"
+                >
+                  이 터미널·대기 시간으로 챗봇 열기
+                </Link>
+              );
+            })()}
+          </div>
         </div>
       )}
     </Modal>

@@ -1,6 +1,8 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useToast } from '../hooks/useToast';
+import { useI18n } from '../context/I18nContext';
 
 function LoginPage() {
   const [email, setEmail] = useState('');
@@ -10,9 +12,16 @@ function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   const { login } = useAuth();
+  const { t } = useI18n();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { showToast } = useToast();
 
-  const handleSubmit = async (e) => {
+  useEffect(() => {
+    if (!location.state?.resetOk) return;
+    showToast('비밀번호가 변경되었습니다. 로그인해 주세요.', 'success');
+    navigate('/login', { replace: true, state: {} });
+  }, [location.state, navigate, showToast]);
     e.preventDefault();
     setError('');
     setLoading(true);
@@ -33,8 +42,8 @@ function LoginPage() {
       <div className="w-full max-w-md rounded-2xl border border-slate-200/80 bg-white p-8 shadow-xl dark:border-slate-700 dark:bg-slate-900">
         <div className="mb-8 text-center">
           <div className="mb-2 text-4xl">✈️</div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">ICN Flight Alert</h1>
-          <p className="mt-2 text-slate-600 dark:text-slate-400">인천공항 비행편 실시간 알림</p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">{t('login.title')}</h1>
+          <p className="mt-2 text-slate-600 dark:text-slate-400">{t('login.subtitle')}</p>
         </div>
 
         {error && (
@@ -46,7 +55,7 @@ function LoginPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="email" className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-              이메일
+              {t('login.email')}
             </label>
             <input
               id="email"
@@ -61,7 +70,7 @@ function LoginPage() {
 
           <div>
             <label htmlFor="password" className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-              비밀번호
+              {t('login.password')}
             </label>
             <div className="relative">
               <input
@@ -70,7 +79,7 @@ function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                placeholder="비밀번호를 입력하세요"
+                placeholder="••••••••"
                 className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 pr-24 outline-none transition focus:ring-2 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
               />
               <button
@@ -78,9 +87,18 @@ function LoginPage() {
                 onClick={() => setShowPassword((v) => !v)}
                 className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-xs text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-slate-700"
               >
-                {showPassword ? '숨기기' : '보기'}
+                {showPassword ? t('login.hide') : t('login.show')}
               </button>
             </div>
+          </div>
+
+          <div className="text-right">
+            <Link
+              to="/forgot-password"
+              className="text-sm font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
+            >
+              {t('login.forgot')}
+            </Link>
           </div>
 
           <button
@@ -88,19 +106,19 @@ function LoginPage() {
             disabled={loading}
             className="w-full rounded-xl bg-indigo-600 py-3 font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {loading ? '로그인 중...' : '로그인'}
+            {loading ? t('login.loading') : t('login.submit')}
           </button>
         </form>
 
         <div className="mt-6 text-center">
           <p className="text-slate-600 dark:text-slate-400">
-            계정이 없으신가요?{' '}
+            {t('login.noAccount')}{' '}
             <button
               type="button"
               onClick={() => navigate('/signup')}
               className="font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
             >
-              회원가입
+              {t('login.signupCta')}
             </button>
           </p>
         </div>

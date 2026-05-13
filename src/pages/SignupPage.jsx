@@ -36,9 +36,15 @@ function SignupPage() {
     if (result.success) {
       if (result.autoLogin) {
         showToast('회원가입이 완료되었습니다. 환영합니다!', 'success');
+        if (result.data && result.data.email_verified === false) {
+          showToast('이메일 인증 링크를 확인해 주세요.', 'info');
+        }
         navigate('/dashboard');
       } else {
         showToast('회원가입이 완료되었습니다. 로그인해 주세요.', 'success');
+        if (result.data?.email_verified === false) {
+          showToast('가입한 메일함에서 인증 링크를 확인해 주세요.', 'info');
+        }
         navigate('/login');
       }
     } else {

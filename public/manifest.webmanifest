@@ -1,0 +1,19 @@
+{
+  "name": "ICN Flight Alert",
+  "short_name": "ICN Alert",
+  "description": "Incheon airport flight monitoring and alerts",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#4f46e5",
+  "lang": "ko",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

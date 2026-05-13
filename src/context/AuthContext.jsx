@@ -24,6 +24,7 @@ export function AuthProvider({ children }) {
       setUser(data);
     } catch {
       localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
       setUser(null);
     } finally {
       setLoading(false);
@@ -39,8 +40,6 @@ export function AuthProvider({ children }) {
     }
   }, [fetchUser]);
 
-  // axios 인터셉터가 401을 만나면 토큰을 지우고 이 이벤트를 발행함.
-  // 풀 페이지 리로드 대신 React 상태와 라우터를 정리한다.
   useEffect(() => {
     const handler = () => {
       setUser(null);
@@ -56,6 +55,7 @@ export function AuthProvider({ children }) {
     try {
       const data = await authApi.login({ email, password });
       localStorage.setItem('access_token', data.access_token);
+      localStorage.setItem('refresh_token', data.refresh_token);
       const me = await authApi.fetchMe();
       setUser(me);
       return { success: true };
@@ -74,6 +74,7 @@ export function AuthProvider({ children }) {
       /* 서버 실패(만료 토큰 등)에도 로컬 세션 정리 */
     } finally {
       localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
       setUser(null);
       navigate('/login');
     }
@@ -82,7 +83,6 @@ export function AuthProvider({ children }) {
   const signup = async (email, password) => {
     try {
       const data = await authApi.signup({ email, password });
-      // 회원가입 성공 후 자동 로그인 시도. 실패 시 사용자에게 로그인 페이지로 안내.
       const loginResult = await login(email, password);
       return {
         success: true,
@@ -98,8 +98,20 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const resendVerification = async () => {
+    try {
+      await authApi.resendVerification();
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: getApiErrorMessage(error, '재발송에 실패했습니다.'),
+      };
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, signup, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, signup, resendVerification, loading }}>
       {children}
     </AuthContext.Provider>
   );

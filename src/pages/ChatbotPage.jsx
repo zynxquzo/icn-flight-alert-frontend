@@ -97,11 +97,40 @@ function modeLabel(mode) {
 
 function getInitialChatbotSessionState() {
   const s = loadChatbotSession();
+  let terminal = s?.terminal ?? 'T1';
+  let waitHours = s?.waitHours ?? '';
+  let messages = s?.messages ?? [];
+  let persistedAt = s?.updatedAt ?? Date.now();
+
+  if (typeof window !== 'undefined') {
+    const sp = new URLSearchParams(window.location.search);
+    let fromUrl = false;
+    const t = sp.get('terminal');
+    if (t === 'T1' || t === 'T2') {
+      terminal = t;
+      fromUrl = true;
+    }
+    const w = sp.get('wait');
+    if (w != null && w !== '') {
+      waitHours = String(w);
+      fromUrl = true;
+    }
+    if (fromUrl) {
+      messages = [];
+      persistedAt = Date.now();
+      try {
+        window.history.replaceState({}, '', window.location.pathname);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+
   return {
-    terminal: s?.terminal ?? 'T1',
-    waitHours: s?.waitHours ?? '',
-    messages: s?.messages ?? [],
-    persistedAt: s?.updatedAt ?? Date.now(),
+    terminal,
+    waitHours,
+    messages,
+    persistedAt,
   };
 }
 
