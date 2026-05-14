@@ -12,8 +12,8 @@
 * **HTTP Client**: `axios` (JWT·**리프레시 토큰** 재발급 인터셉터, `Authorization: Bearer`)
 * **Styling**: `Tailwind CSS` v4 (클래스 기반 다크 모드)
 * **Language**: JavaScript (JSX)
-* **i18n**: `I18nProvider` + `src/i18n/messages.js` — 레이아웃·로그인·대시보드 일부 **한국어 / English**
-* **PWA**: `public/manifest.webmanifest`, `public/sw.js` — 프로덕션 빌드(`npm run build`) 후 **설치 가능 앱** 형태로 사용 가능(최소 SW)
+* **i18n**: `I18nProvider` + `src/i18n/messages.js` — 로그인·**대시보드·비행편 카드/상세/등록**·**챗봇** 등 주요 화면 **한국어 / English** (`t(key)` 및 `{변수}` 치환)
+* **PWA**: `public/manifest.webmanifest`, `public/sw.js`, **`public/offline.html`** — 프로덕션 빌드 후 **설치 가능 앱** + **오프라인 시 최소 안내 페이지**(문서 내비게이션 실패 시; API는 네트워크 전용)
 
 ---
 
@@ -67,7 +67,8 @@
 ```
 public/
 ├── manifest.webmanifest   # PWA 메타
-├── sw.js                  # 프로덕션에서만 등록 (최소 SW)
+├── sw.js                  # 프로덕션에서만 등록 (precache + 오프라인 내비 폴백)
+├── offline.html           # 오프라인 최소 UI (한·영 안내)
 └── favicon.svg
 src/
 ├── api/

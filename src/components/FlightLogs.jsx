@@ -1,12 +1,6 @@
+import { useMemo } from 'react';
 import { changeTypeLabel, formatIncheonDateTime } from '../utils/format';
-
-const LOG_FILTERS = [
-  { value: '', label: '전체' },
-  { value: 'gate_change', label: '게이트' },
-  { value: 'delay', label: '지연' },
-  { value: 'status_change', label: '상태' },
-  { value: 'terminal_change', label: '터미널' },
-];
+import { useI18n } from '../context/I18nContext';
 
 export default function FlightLogs({
   flightPk,
@@ -15,14 +9,27 @@ export default function FlightLogs({
   logs,
   loading,
   error,
+  localeTag = 'ko-KR',
 }) {
+  const { t } = useI18n();
   const fid = `log-filter-${flightPk}`;
+
+  const LOG_FILTERS = useMemo(
+    () => [
+      { value: '', label: t('dashboard.logFilterAll') },
+      { value: 'gate_change', label: t('dashboard.logFilterGate') },
+      { value: 'delay', label: t('dashboard.logFilterDelay') },
+      { value: 'status_change', label: t('dashboard.logFilterStatus') },
+      { value: 'terminal_change', label: t('dashboard.logFilterTerminal') },
+    ],
+    [t],
+  );
 
   return (
     <div className="w-full border-t border-slate-100 pt-3 dark:border-slate-800">
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <label htmlFor={fid} className="text-xs font-medium text-slate-500 dark:text-slate-400">
-          이력 유형
+          {t('dashboard.logFilterLabel')}
         </label>
         <select
           id={fid}
@@ -39,11 +46,11 @@ export default function FlightLogs({
       </div>
 
       {loading ? (
-        <p className="text-sm text-slate-500">이력 불러오는 중…</p>
+        <p className="text-sm text-slate-500">{t('dashboard.logsLoading')}</p>
       ) : error ? (
         <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
       ) : logs.length === 0 ? (
-        <p className="text-sm text-slate-500">저장된 변경 이력이 없습니다.</p>
+        <p className="text-sm text-slate-500">{t('dashboard.logsEmpty')}</p>
       ) : (
         <ul className="max-h-48 space-y-2 overflow-y-auto text-sm">
           {logs.map((log) => (
@@ -52,18 +59,18 @@ export default function FlightLogs({
               className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-800/50"
             >
               <span className="font-medium text-slate-800 dark:text-slate-100">
-                {changeTypeLabel(log.change_type)}
+                {changeTypeLabel(t, log.change_type)}
               </span>
               <span className="ml-2 text-xs text-slate-500">
-                {log.detected_at ? new Date(log.detected_at).toLocaleString('ko-KR') : ''}
+                {log.detected_at ? new Date(log.detected_at).toLocaleString(localeTag) : ''}
               </span>
               <p className="mt-1 text-slate-600 dark:text-slate-300">
-                게이트 {log.gate_number ?? '—'} · 터미널 {log.terminal_id ?? '—'} · 비고{' '}
-                {log.remark ?? '—'}
+                {t('dashboard.logLineGate')} {log.gate_number ?? '—'} · {t('dashboard.logLineTerminal')}{' '}
+                {log.terminal_id ?? '—'} · {t('dashboard.logLineRemark')} {log.remark ?? '—'}
               </p>
               <p className="text-xs text-slate-500">
-                예정 {formatIncheonDateTime(log.schedule_date_time)} · 추정{' '}
-                {formatIncheonDateTime(log.estimated_date_time)}
+                {t('dashboard.logLineSched')} {formatIncheonDateTime(log.schedule_date_time)} ·{' '}
+                {t('dashboard.logLineEst')} {formatIncheonDateTime(log.estimated_date_time)}
               </p>
             </li>
           ))}

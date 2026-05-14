@@ -4,6 +4,7 @@ import Modal from './Modal';
 import Spinner from './Spinner';
 import { fetchFlightDetail } from '../api/flights';
 import { getApiErrorMessage } from '../utils/apiError';
+import { useI18n } from '../context/I18nContext';
 import {
   flightTypeLabel,
   formatIncheonDateTime,
@@ -16,6 +17,8 @@ import {
  * 부모는 detailPk가 있을 때만 마운트하고, 편이 바뀌면 key로 리마운트해 로딩 초기 상태를 맞춥니다.
  */
 export default function FlightDetailsModal({ flightPk, onClose }) {
+  const { t, lang } = useI18n();
+  const localeTag = lang === 'en' ? 'en-US' : 'ko-KR';
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -28,7 +31,7 @@ export default function FlightDetailsModal({ flightPk, onClose }) {
       })
       .catch((e) => {
         if (!cancelled) {
-          setError(getApiErrorMessage(e, '상세 정보를 불러오지 못했습니다.'));
+          setError(getApiErrorMessage(e, t('flightDetail.loadError')));
         }
       })
       .finally(() => {
@@ -37,7 +40,7 @@ export default function FlightDetailsModal({ flightPk, onClose }) {
     return () => {
       cancelled = true;
     };
-  }, [flightPk]);
+  }, [flightPk, t]);
 
   const row = (label, value) => (
     <div className="flex flex-col gap-0.5 border-b border-slate-100 py-2 last:border-0 dark:border-slate-800 sm:flex-row sm:justify-between">
@@ -47,7 +50,7 @@ export default function FlightDetailsModal({ flightPk, onClose }) {
   );
 
   return (
-    <Modal open onClose={onClose} title="비행편 상세" ariaLabelledBy="flight-detail-title">
+    <Modal open onClose={onClose} title={t('flightDetail.title')} ariaLabelledBy="flight-detail-title">
       {loading && (
         <div className="flex justify-center py-8">
           <Spinner className="text-indigo-600" />
@@ -56,24 +59,27 @@ export default function FlightDetailsModal({ flightPk, onClose }) {
       {!loading && error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
       {!loading && detail && (
         <div className="space-y-1">
-          {row('편명', detail.flight_id)}
-          {row('날짜', detail.flight_date)}
-          {row('구분', flightTypeLabel(detail.flight_type))}
-          {row('항공사', detail.airline)}
-          {row('공항', detail.airport)}
-          {row('공항 코드', detail.airport_code)}
-          {row('터미널', detail.terminal_id)}
-          {row('게이트', detail.gate_number)}
-          {row('예정 시각', formatIncheonDateTime(detail.schedule_date_time))}
-          {row('추정 시각', formatIncheonDateTime(detail.estimated_date_time))}
-          {row('비고', detail.remark)}
-          {row('체크인', detail.chkin_range)}
-          {row('캐러셀', detail.carousel)}
-          {row('출구', detail.exit_number)}
-          {row('모니터링', detail.is_active ? '켜짐' : '꺼짐')}
-          {row('등록일', formatIsoDateTime(detail.created_at))}
-          {row('마지막 갱신', formatIsoDateTime(detail.last_checked_at))}
-          {row('사용자 이메일', detail.user_email)}
+          {row(t('flightDetail.flightNo'), detail.flight_id)}
+          {row(t('flightDetail.date'), detail.flight_date)}
+          {row(t('flightDetail.type'), flightTypeLabel(t, detail.flight_type))}
+          {row(t('flightDetail.airline'), detail.airline)}
+          {row(t('flightDetail.airport'), detail.airport)}
+          {row(t('flightDetail.airportCode'), detail.airport_code)}
+          {row(t('flightDetail.terminal'), detail.terminal_id)}
+          {row(t('flightDetail.gate'), detail.gate_number)}
+          {row(t('flightDetail.schedTime'), formatIncheonDateTime(detail.schedule_date_time))}
+          {row(t('flightDetail.estTime'), formatIncheonDateTime(detail.estimated_date_time))}
+          {row(t('flightDetail.remark'), detail.remark)}
+          {row(t('flightDetail.checkin'), detail.chkin_range)}
+          {row(t('flightDetail.carousel'), detail.carousel)}
+          {row(t('flightDetail.exit'), detail.exit_number)}
+          {row(
+            t('flightDetail.monitoring'),
+            detail.is_active ? t('flightDetail.monitoringOn') : t('flightDetail.monitoringOff'),
+          )}
+          {row(t('flightDetail.created'), formatIsoDateTime(detail.created_at, localeTag))}
+          {row(t('flightDetail.lastUpdated'), formatIsoDateTime(detail.last_checked_at, localeTag))}
+          {row(t('flightDetail.userEmail'), detail.user_email)}
           <div className="pt-4">
             {(() => {
               const term = terminalForChatOption(detail.terminal_id);
@@ -89,9 +95,10 @@ export default function FlightDetailsModal({ flightPk, onClose }) {
               return (
                 <Link
                   to={to}
+                  onClick={() => onClose?.()}
                   className="inline-flex w-full items-center justify-center rounded-xl bg-indigo-600 px-4 py-3 text-center text-sm font-medium text-white hover:bg-indigo-700 sm:w-auto"
                 >
-                  이 터미널·대기 시간으로 챗봇 열기
+                  {t('flightDetail.openChatbot')}
                 </Link>
               );
             })()}

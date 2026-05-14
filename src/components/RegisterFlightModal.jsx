@@ -3,8 +3,10 @@ import Modal from './Modal';
 import { createFlight } from '../api/flights';
 import { getApiErrorMessage } from '../utils/apiError';
 import { normalizeFlightId } from '../utils/format';
+import { useI18n } from '../context/I18nContext';
 
 export default function RegisterFlightModal({ open, onClose, onRegistered }) {
+  const { t } = useI18n();
   const [flightId, setFlightId] = useState('');
   const [flightDate, setFlightDate] = useState('');
   const [flightType, setFlightType] = useState('departure');
@@ -38,11 +40,11 @@ export default function RegisterFlightModal({ open, onClose, onRegistered }) {
 
     const id = normalizeFlightId(flightId);
     if (id.length < 2 || id.length > 10) {
-      setRegisterError('편명은 2~10자(공백 제외)로 입력해 주세요. 예: KE123');
+      setRegisterError(t('register.errIdLen'));
       return;
     }
     if (!flightDate) {
-      setRegisterError('출발/도착 날짜를 선택해 주세요.');
+      setRegisterError(t('register.errDate'));
       return;
     }
 
@@ -59,11 +61,9 @@ export default function RegisterFlightModal({ open, onClose, onRegistered }) {
         created?.enriched !== false &&
         (created?.airline || created?.schedule_date_time);
       if (apiEnriched) {
-        setRegisterSuccess('비행편이 등록되었습니다.');
+        setRegisterSuccess(t('register.successOk'));
       } else {
-        setRegisterSuccess(
-          '비행편이 등록되었지만 인천공항 API에서 정보를 가져오지 못했습니다. 편명·날짜·구분이 정확한지 확인하고, 잠시 후 카드의 [정보 갱신]을 눌러 주세요.',
-        );
+        setRegisterSuccess(t('register.successPartial'));
       }
       setFlightId('');
       onRegistered?.();
@@ -74,7 +74,7 @@ export default function RegisterFlightModal({ open, onClose, onRegistered }) {
         apiEnriched ? 700 : 2500,
       );
     } catch (err) {
-      setRegisterError(getApiErrorMessage(err, '비행편 등록에 실패했습니다.'));
+      setRegisterError(getApiErrorMessage(err, t('register.errSubmit')));
     } finally {
       setRegisterSubmitting(false);
     }
@@ -84,7 +84,7 @@ export default function RegisterFlightModal({ open, onClose, onRegistered }) {
     <Modal
       open={open}
       onClose={closeRegister}
-      title="비행편 등록"
+      title={t('register.title')}
       ariaLabelledBy="register-flight-title"
       footer={
         <>
@@ -94,7 +94,7 @@ export default function RegisterFlightModal({ open, onClose, onRegistered }) {
             disabled={registerSubmitting}
             className="rounded-xl border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
           >
-            취소
+            {t('common.cancel')}
           </button>
           <button
             type="submit"
@@ -102,14 +102,15 @@ export default function RegisterFlightModal({ open, onClose, onRegistered }) {
             disabled={registerSubmitting}
             className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
           >
-            {registerSubmitting ? '등록 중...' : '등록하기'}
+            {registerSubmitting ? t('register.submitting') : t('register.submit')}
           </button>
         </>
       }
     >
       <p className="mb-4 text-sm text-slate-600 dark:text-slate-400">
-        <code className="rounded bg-slate-100 px-1 text-xs dark:bg-slate-800">POST /flights</code>와
-        동일합니다. 편명·날짜·출발/도착을 입력하면 로그인한 계정에 연결됩니다.
+        {t('register.hintBefore')}
+        <code className="rounded bg-slate-100 px-1 text-xs dark:bg-slate-800">{t('register.hintApi')}</code>
+        {t('register.hintAfter')}
       </p>
       <form id="register-flight-form" onSubmit={handleSubmit} className="space-y-4">
         {registerError && (
@@ -128,19 +129,19 @@ export default function RegisterFlightModal({ open, onClose, onRegistered }) {
             htmlFor="reg-flight-id"
             className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300"
           >
-            항공편명 <span className="text-red-500">*</span>
+            {t('register.flightId')} <span className="text-red-500">*</span>
           </label>
           <input
             id="reg-flight-id"
             type="text"
             value={flightId}
             onChange={(e) => setFlightId(e.target.value)}
-            placeholder="예: KE123"
+            placeholder={t('register.placeholderId')}
             autoComplete="off"
             maxLength={10}
             className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 uppercase outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
           />
-          <p className="mt-1 text-xs text-slate-500">2~10자, 저장 시 공백 제거·대문자 변환</p>
+          <p className="mt-1 text-xs text-slate-500">{t('register.idHelp')}</p>
         </div>
 
         <div>
@@ -148,7 +149,7 @@ export default function RegisterFlightModal({ open, onClose, onRegistered }) {
             htmlFor="reg-flight-date"
             className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300"
           >
-            출발/도착 날짜 <span className="text-red-500">*</span>
+            {t('register.flightDate')} <span className="text-red-500">*</span>
           </label>
           <input
             id="reg-flight-date"
@@ -161,7 +162,7 @@ export default function RegisterFlightModal({ open, onClose, onRegistered }) {
 
         <fieldset>
           <legend className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-            구분
+            {t('register.typeLegend')}
           </legend>
           <div className="flex gap-4">
             <label className="flex cursor-pointer items-center gap-2">
@@ -172,7 +173,7 @@ export default function RegisterFlightModal({ open, onClose, onRegistered }) {
                 checked={flightType === 'departure'}
                 onChange={() => setFlightType('departure')}
               />
-              <span className="text-slate-800 dark:text-slate-200">출발 (departure)</span>
+              <span className="text-slate-800 dark:text-slate-200">{t('register.departureOpt')}</span>
             </label>
             <label className="flex cursor-pointer items-center gap-2">
               <input
@@ -182,7 +183,7 @@ export default function RegisterFlightModal({ open, onClose, onRegistered }) {
                 checked={flightType === 'arrival'}
                 onChange={() => setFlightType('arrival')}
               />
-              <span className="text-slate-800 dark:text-slate-200">도착 (arrival)</span>
+              <span className="text-slate-800 dark:text-slate-200">{t('register.arrivalOpt')}</span>
             </label>
           </div>
         </fieldset>

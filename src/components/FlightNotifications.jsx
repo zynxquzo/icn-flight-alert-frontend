@@ -1,15 +1,18 @@
 import Badge from './Badge';
 import { notificationTypeLabel } from '../utils/format';
+import { useI18n } from '../context/I18nContext';
 
-export default function FlightNotifications({ notifications, loading, error }) {
+export default function FlightNotifications({ notifications, loading, error, localeTag = 'ko-KR' }) {
+  const { t } = useI18n();
+
   if (loading) {
-    return <p className="text-sm text-slate-500">알림 불러오는 중…</p>;
+    return <p className="text-sm text-slate-500">{t('dashboard.flightNotifsLoading')}</p>;
   }
   if (error) {
     return <p className="text-sm text-red-600 dark:text-red-400">{error}</p>;
   }
   if (!notifications?.length) {
-    return <p className="text-sm text-slate-500">이 비행편에 대한 알림이 없습니다.</p>;
+    return <p className="text-sm text-slate-500">{t('dashboard.flightNotifsEmpty')}</p>;
   }
 
   return (
@@ -20,15 +23,15 @@ export default function FlightNotifications({ notifications, loading, error }) {
           className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-800/50"
         >
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="purple">{notificationTypeLabel(n.notification_type)}</Badge>
+            <Badge variant="purple">{notificationTypeLabel(t, n.notification_type)}</Badge>
             <span
               className={`text-xs ${n.is_sent ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}
             >
-              {n.is_sent ? '발송됨' : '미발송'}
+              {n.is_sent ? t('common.sent') : t('common.notSent')}
             </span>
             {n.sent_at && (
               <span className="text-xs text-slate-400">
-                {new Date(n.sent_at).toLocaleString('ko-KR')}
+                {new Date(n.sent_at).toLocaleString(localeTag)}
               </span>
             )}
           </div>

@@ -11,30 +11,49 @@ export function formatIncheonDateTime(s) {
   return `${y}-${M}-${d} ${h}:${m}`;
 }
 
-export function formatIsoDateTime(iso) {
+/** @param {string} [localeTag] BCP 47, e.g. ko-KR / en-US */
+export function formatIsoDateTime(iso, localeTag = 'ko-KR') {
   if (!iso) return '—';
   try {
-    return new Date(iso).toLocaleString('ko-KR');
+    return new Date(iso).toLocaleString(localeTag);
   } catch {
     return String(iso);
   }
 }
 
-export function flightTypeLabel(t) {
-  return { departure: '출발', arrival: '도착' }[t] ?? t ?? '—';
+/** @param {(key: string) => string} [t] i18n lookup from useI18n */
+export function flightTypeLabel(t, type) {
+  const key = `enums.flightType.${type}`;
+  if (typeof t === 'function') {
+    const label = t(key);
+    if (label !== key) return label;
+  }
+  return { departure: '출발', arrival: '도착' }[type] ?? type ?? '—';
 }
 
-export function notificationTypeLabel(t) {
+/** @param {(key: string) => string} [t] */
+export function notificationTypeLabel(t, type) {
+  const key = `enums.notificationType.${type}`;
+  if (typeof t === 'function') {
+    const label = t(key);
+    if (label !== key) return label;
+  }
   const map = {
     delay: '지연',
     gate_change: '게이트 변경',
     cancel: '취소',
     terminal_change: '터미널 변경',
   };
-  return map[t] ?? t ?? '—';
+  return map[type] ?? type ?? '—';
 }
 
-export function changeTypeLabel(t) {
+/** @param {(key: string) => string} [t] */
+export function changeTypeLabel(t, type) {
+  const key = `enums.changeType.${type}`;
+  if (typeof t === 'function') {
+    const label = t(key);
+    if (label !== key) return label;
+  }
   const map = {
     gate_change: '게이트 변경',
     terminal_change: '터미널 변경',
@@ -42,7 +61,7 @@ export function changeTypeLabel(t) {
     status_change: '상태 변경',
     eta_adjust: '예정 시각 조정',
   };
-  return map[t] ?? t ?? '변경';
+  return map[type] ?? type ?? '변경';
 }
 
 export function normalizeFlightId(value) {
@@ -52,16 +71,30 @@ export function normalizeFlightId(value) {
     .replace(/\s+/g, '');
 }
 
-/** POST /flights/{pk}/refresh 응답 → 토스트 문구 */
-export function summarizeRefreshResult(result) {
-  if (result == null) return '갱신이 완료되었습니다.';
-  if (!result.changes_detected) return '최신 상태입니다. 변경 사항이 없습니다.';
+/** POST /flights/{pk}/refresh 응답 → 토스트 문구 @param {(key: string, vars?: object) => string} [t] */
+export function summarizeRefreshResult(result, t) {
+  if (result == null) return t ? t('refresh.done') : '갱신이 완료되었습니다.';
+  if (!result.changes_detected) {
+    return t ? t('refresh.noChanges') : '최신 상태입니다. 변경 사항이 없습니다.';
+  }
   const changes = result.changes || [];
   const parts = changes.slice(0, 5).map((c) => {
-    const label = changeTypeLabel(c.change_type);
+    const label = changeTypeLabel(t, c.change_type);
     return `${label}: ${c.old_value ?? '—'} → ${c.new_value ?? '—'}`;
   });
-  const extra = changes.length > 5 ? ` …외 ${changes.length - 5}건` : '';
+  const extra =
+    changes.length > 5
+      ? t
+        ? t('refresh.moreSuffix', { n: changes.length - 5 })
+        : ` …외 ${changes.length - 5}건`
+      : '';
+  if (t) {
+    return t('refresh.changesSummary', {
+      count: changes.length,
+      details: parts.join('; '),
+      extra,
+    });
+  }
   return `변경 ${changes.length}건 감지: ${parts.join('; ')}${extra}`;
 }
 

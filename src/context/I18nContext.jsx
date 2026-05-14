@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { messages } from '../i18n/messages';
 
 const I18nContext = createContext(null);
@@ -13,6 +13,15 @@ function getNested(obj, path) {
     cur = cur[p];
   }
   return typeof cur === 'string' ? cur : undefined;
+}
+
+function applyVars(str, vars) {
+  if (!vars || typeof str !== 'string') return str;
+  let out = str;
+  for (const [k, v] of Object.entries(vars)) {
+    out = out.split(`{${k}}`).join(String(v));
+  }
+  return out;
 }
 
 export function I18nProvider({ children }) {
@@ -31,12 +40,19 @@ export function I18nProvider({ children }) {
     }
   }, []);
 
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = lang === 'en' ? 'en' : 'ko';
+    }
+  }, [lang]);
+
   const t = useCallback(
-    (key) => {
+    (key, vars) => {
       const fromLang = getNested(messages[lang], key);
-      if (fromLang) return fromLang;
+      if (fromLang) return applyVars(fromLang, vars);
       const fallback = getNested(messages.ko, key);
-      return fallback ?? key;
+      if (fallback) return applyVars(fallback, vars);
+      return typeof key === 'string' ? applyVars(key, vars) : key;
     },
     [lang],
   );

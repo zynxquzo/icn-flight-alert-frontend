@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import AppLayout from '../components/AppLayout';
 import Badge from '../components/Badge';
 import { fetchChatbotInfo, sendChatMessage } from '../api/chatbot';
 import { getApiErrorMessage } from '../utils/apiError';
+import { useI18n } from '../context/I18nContext';
 
 /** 같은 탭에서만 유지. 탭을 닫으면 브라우저가 sessionStorage를 비움 */
 const CHATBOT_SESSION_KEY = 'icn-flight-alert-chatbot';
@@ -65,29 +66,6 @@ function clearChatbotSessionStorage() {
   }
 }
 
-const TERMINALS = [
-  { value: 'T1', label: '제1여객터미널 (T1)' },
-  { value: 'T2', label: '제2여객터미널 (T2)' },
-];
-
-const EXAMPLES = [
-  {
-    label: '1시간 대기',
-    text: '1시간 정도 남았는데 게이트 근처에서 할 만한 게 뭐가 있을까?',
-    hours: 1,
-  },
-  {
-    label: '2시간 대기',
-    text: '2시간 여유가 있는데 식사하고 쇼핑하기 좋은 코스 추천해줘.',
-    hours: 2,
-  },
-  {
-    label: '3시간 대기',
-    text: '3시간 기다려야 하는데 뭐하면 좋을까요?',
-    hours: 3,
-  },
-];
-
 function modeLabel(mode) {
   const m = String(mode || '').toLowerCase();
   if (m === 'agent') return 'AGENT';
@@ -135,6 +113,23 @@ function getInitialChatbotSessionState() {
 }
 
 export default function ChatbotPage() {
+  const { t } = useI18n();
+  const terminals = useMemo(
+    () => [
+      { value: 'T1', label: t('chatbot.terminalT1') },
+      { value: 'T2', label: t('chatbot.terminalT2') },
+    ],
+    [t],
+  );
+  const examples = useMemo(
+    () => [
+      { label: t('chatbot.ex1Label'), text: t('chatbot.ex1Text'), hours: 1 },
+      { label: t('chatbot.ex2Label'), text: t('chatbot.ex2Text'), hours: 2 },
+      { label: t('chatbot.ex3Label'), text: t('chatbot.ex3Text'), hours: 3 },
+    ],
+    [t],
+  );
+
   const initialSessionRef = useRef(null);
   if (initialSessionRef.current === null) {
     initialSessionRef.current = getInitialChatbotSessionState();
@@ -159,13 +154,13 @@ export default function ChatbotPage() {
         const data = await fetchChatbotInfo();
         if (!cancelled) setInfo(data);
       } catch (e) {
-        if (!cancelled) setInfoError(getApiErrorMessage(e, '챗봇 정보를 불러오지 못했습니다.'));
+        if (!cancelled) setInfoError(getApiErrorMessage(e, t('chatbot.errInfo')));
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (skipInitialPersistRef.current) {
@@ -212,7 +207,7 @@ export default function ChatbotPage() {
         terminal,
         wait_time_hours: waitHours === '' ? null : waitHours,
       });
-      const reply = data?.response ?? '(응답 없음)';
+      const reply = data?.response ?? t('chatbot.noReply');
       setMessages((prev) => [
         ...prev,
         {
@@ -223,10 +218,10 @@ export default function ChatbotPage() {
         },
       ]);
     } catch (err) {
-      const msg = getApiErrorMessage(err, '챗봇 응답을 받지 못했습니다.');
+      const msg = getApiErrorMessage(err, t('chatbot.errChat'));
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', text: `오류: ${msg}`, isError: true },
+        { role: 'assistant', text: `${t('chatbot.errPrefix')}: ${msg}`, isError: true },
       ]);
     } finally {
       setSending(false);
@@ -237,11 +232,11 @@ export default function ChatbotPage() {
     <AppLayout>
       <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">공항 안내 챗봇</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('chatbot.title')}</h1>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-            대기 시간 동안 식사·쇼핑·휴식 등 인천공항 이용 팁을 물어보세요.{' '}
-            <code className="rounded bg-slate-100 px-1 text-xs dark:bg-slate-800">POST /chatbot/chat</code>
-            과 연동됩니다.
+            {t('chatbot.subtitle')}{' '}
+            <code className="rounded bg-slate-100 px-1 text-xs dark:bg-slate-800">{t('chatbot.postChat')}</code>{' '}
+            {t('chatbot.subtitleApi')}
           </p>
           {infoError && (
             <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
@@ -263,7 +258,7 @@ export default function ChatbotPage() {
           {info?.env && (
             <details className="mt-4 rounded-xl border border-slate-200 bg-slate-50/80 p-3 dark:border-slate-700 dark:bg-slate-800/50">
               <summary className="cursor-pointer text-sm font-medium text-slate-800 dark:text-slate-200">
-                환경 변수 안내 (운영·관리자 참고)
+                {t('chatbot.envSummary')}
               </summary>
               <dl className="mt-3 space-y-2 text-xs text-slate-600 dark:text-slate-400">
                 {Object.entries(info.env).map(([key, val]) => (
@@ -279,9 +274,9 @@ export default function ChatbotPage() {
 
         <div className="flex h-[min(560px,calc(100vh-280px))] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
           <div className="space-y-3 border-b border-slate-100 p-4 dark:border-slate-800">
-            <p className="text-xs text-slate-500 dark:text-slate-400">빠른 질문</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{t('chatbot.quickQuestions')}</p>
             <div className="flex flex-wrap gap-2">
-              {EXAMPLES.map((ex) => (
+              {examples.map((ex) => (
                 <button
                   key={ex.label}
                   type="button"
@@ -295,7 +290,7 @@ export default function ChatbotPage() {
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <label htmlFor="cb-terminal" className="mb-1 block text-xs font-medium text-slate-500">
-                  터미널
+                  {t('chatbot.terminal')}
                 </label>
                 <select
                   id="cb-terminal"
@@ -303,16 +298,16 @@ export default function ChatbotPage() {
                   onChange={(e) => setTerminal(e.target.value)}
                   className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
                 >
-                  {TERMINALS.map((t) => (
-                    <option key={t.value} value={t.value}>
-                      {t.label}
+                  {terminals.map((tm) => (
+                    <option key={tm.value} value={tm.value}>
+                      {tm.label}
                     </option>
                   ))}
                 </select>
               </div>
               <div>
                 <label htmlFor="cb-wait" className="mb-1 block text-xs font-medium text-slate-500">
-                  대기 시간 (시간, 선택)
+                  {t('chatbot.waitHours')}
                 </label>
                 <input
                   id="cb-wait"
@@ -320,26 +315,22 @@ export default function ChatbotPage() {
                   min={0}
                   max={24}
                   step={1}
-                  placeholder="예: 3"
+                  placeholder={t('chatbot.waitPlaceholder')}
                   value={waitHours}
                   onChange={(e) => setWaitHours(e.target.value)}
                   className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
                 />
               </div>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-500">
-              대기 시간을 넣으면 그에 맞춘 추천에 도움이 됩니다. 비워 두면 일반 질문만 전달됩니다.
-            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-500">{t('chatbot.waitHint')}</p>
             <p className="text-xs text-slate-400 dark:text-slate-500">
-              이 탭에서만 대화가 저장됩니다. 탭을 닫거나 {CHATBOT_SESSION_IDLE_MS / 60000}분 동안 변화가 없으면 대화가 초기화됩니다.
+              {t('chatbot.sessionHint')} {CHATBOT_SESSION_IDLE_MS / 60000} {t('chatbot.sessionHint2')}
             </p>
           </div>
 
           <div className="flex-1 space-y-4 overflow-y-auto bg-slate-50/90 p-4 dark:bg-slate-950/40">
             {messages.length === 0 && !sending && (
-              <p className="py-12 text-center text-sm text-slate-500">
-                예: &quot;2시간 기다리는데 가볼 만한 곳 있어?&quot;
-              </p>
+              <p className="py-12 text-center text-sm text-slate-500">{t('chatbot.emptyPrompt')}</p>
             )}
             {messages.map((m, i) => (
               <div
@@ -365,7 +356,7 @@ export default function ChatbotPage() {
                       )}
                       {m.sources?.length > 0 && (
                         <ul className="space-y-1 text-xs">
-                          <li className="font-medium text-slate-500 dark:text-slate-400">근거 문서</li>
+                          <li className="font-medium text-slate-500 dark:text-slate-400">{t('chatbot.sources')}</li>
                           {m.sources.map((s, j) => (
                             <li key={s.doc_id || j}>
                               {s.source_url ? (
@@ -375,7 +366,7 @@ export default function ChatbotPage() {
                                   rel="noopener noreferrer"
                                   className="text-indigo-600 underline hover:text-indigo-800 dark:text-indigo-400"
                                 >
-                                  {s.title || s.doc_id || '링크'}
+                                  {s.title || s.doc_id || t('chatbot.link')}
                                 </a>
                               ) : (
                                 <span>{s.title || s.doc_id}</span>
@@ -392,7 +383,7 @@ export default function ChatbotPage() {
             {sending && (
               <div className="flex justify-start">
                 <div className="rounded-2xl rounded-bl-md border border-slate-200 bg-white px-4 py-2 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900">
-                  답변 작성 중…
+                  {t('chatbot.typing')}
                 </div>
               </div>
             )}
@@ -408,7 +399,7 @@ export default function ChatbotPage() {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="메시지를 입력하세요"
+                placeholder={t('chatbot.inputPlaceholder')}
                 className="flex-1 rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
                 disabled={sending}
                 autoComplete="off"
@@ -418,7 +409,7 @@ export default function ChatbotPage() {
                 disabled={sending || !input.trim()}
                 className="shrink-0 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                보내기
+                {t('chatbot.send')}
               </button>
             </div>
           </form>

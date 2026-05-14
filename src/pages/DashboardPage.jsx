@@ -17,20 +17,6 @@ import { getApiErrorMessage } from '../utils/apiError';
 import { notificationTypeLabel, summarizeRefreshResult, shouldPollFlightSoon } from '../utils/format';
 import { useToast } from '../hooks/useToast';
 
-const NOTIFICATION_TYPES = [
-  { value: '', label: '전체' },
-  { value: 'delay', label: '지연' },
-  { value: 'gate_change', label: '게이트 변경' },
-  { value: 'cancel', label: '취소' },
-  { value: 'terminal_change', label: '터미널 변경' },
-];
-
-const ACTIVE_FILTERS = [
-  { value: '', label: '전체' },
-  { value: 'active', label: '모니터링 중' },
-  { value: 'inactive', label: '비활성' },
-];
-
 function activeParams(filterValue) {
   if (filterValue === 'active') return { is_active: true };
   if (filterValue === 'inactive') return { is_active: false };
@@ -39,8 +25,29 @@ function activeParams(filterValue) {
 
 export default function DashboardPage() {
   const { user, resendVerification } = useAuth();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { showToast } = useToast();
+  const localeTag = lang === 'en' ? 'en-US' : 'ko-KR';
+
+  const NOTIFICATION_TYPES = useMemo(
+    () => [
+      { value: '', label: t('dashboard.notifTypeAll') },
+      { value: 'delay', label: t('dashboard.notifTypeDelay') },
+      { value: 'gate_change', label: t('dashboard.notifTypeGate') },
+      { value: 'cancel', label: t('dashboard.notifTypeCancel') },
+      { value: 'terminal_change', label: t('dashboard.notifTypeTerminal') },
+    ],
+    [t],
+  );
+
+  const ACTIVE_FILTERS = useMemo(
+    () => [
+      { value: '', label: t('dashboard.activeFilterAll') },
+      { value: 'active', label: t('dashboard.activeFilterActive') },
+      { value: 'inactive', label: t('dashboard.activeFilterInactive') },
+    ],
+    [t],
+  );
   const [flights, setFlights] = useState([]);
   const [listLoading, setListLoading] = useState(true);
   const [listError, setListError] = useState('');
@@ -76,12 +83,12 @@ export default function DashboardPage() {
       const data = await fetchFlights(params);
       setFlights(Array.isArray(data) ? data : []);
     } catch (e) {
-      setListError(getApiErrorMessage(e, '비행편 목록을 불러오지 못했습니다.'));
+      setListError(getApiErrorMessage(e, t('dashboard.listLoadError')));
       setFlights([]);
     } finally {
       setListLoading(false);
     }
-  }, [activeFilter]);
+  }, [activeFilter, t]);
 
   useEffect(() => {
     loadFlights();
@@ -106,12 +113,12 @@ export default function DashboardPage() {
       const data = await fetchMyNotifications(params);
       setNotifications(Array.isArray(data) ? data : []);
     } catch (e) {
-      setNotifError(getApiErrorMessage(e, '알림을 불러오지 못했습니다.'));
+      setNotifError(getApiErrorMessage(e, t('dashboard.notifLoadError')));
       setNotifications([]);
     } finally {
       setNotifLoading(false);
     }
-  }, [user, notifType]);
+  }, [user, notifType, t]);
 
   useEffect(() => {
     loadNotifications();
@@ -130,7 +137,7 @@ export default function DashboardPage() {
       })
       .catch((e) => {
         if (!cancelled) {
-          setLogsError(getApiErrorMessage(e, '변경 이력을 불러오지 못했습니다.'));
+          setLogsError(getApiErrorMessage(e, t('dashboard.logsLoadError')));
         }
       })
       .finally(() => {
@@ -153,7 +160,7 @@ export default function DashboardPage() {
       })
       .catch((e) => {
         if (!cancelled) {
-          setFlightNotifsError(getApiErrorMessage(e, '알림을 불러오지 못했습니다.'));
+          setFlightNotifsError(getApiErrorMessage(e, t('dashboard.flightNotifsError')));
         }
       })
       .finally(() => {
@@ -179,17 +186,17 @@ export default function DashboardPage() {
   };
 
   const handleDelete = async (flightPk) => {
-    if (!window.confirm('이 비행편을 삭제할까요? 관련 알림·이력도 함께 삭제됩니다.')) {
+    if (!window.confirm(t('dashboard.confirmDelete'))) {
       return;
     }
     setActionFlightPk(flightPk);
     try {
       await deleteFlight(flightPk);
       await loadFlights();
-      showToast('비행편이 삭제되었습니다.', 'success');
+      showToast(t('dashboard.toastDeleted'), 'success');
       if (panel?.flightPk === flightPk) setPanel(null);
     } catch (e) {
-      showToast(getApiErrorMessage(e, '삭제에 실패했습니다.'), 'error');
+      showToast(getApiErrorMessage(e, t('dashboard.toastDeleteFail')), 'error');
     } finally {
       setActionFlightPk(null);
     }
@@ -200,9 +207,9 @@ export default function DashboardPage() {
     try {
       await updateFlightStatus(flightPk, nextActive);
       await loadFlights();
-      showToast(nextActive ? '모니터링을 켰습니다.' : '모니터링을 껐습니다.', 'success');
+      showToast(nextActive ? t('dashboard.toastMonitorOn') : t('dashboard.toastMonitorOff'), 'success');
     } catch (e) {
-      showToast(getApiErrorMessage(e, '상태 변경에 실패했습니다.'), 'error');
+      showToast(getApiErrorMessage(e, t('dashboard.toastStatusFail')), 'error');
     } finally {
       setActionFlightPk(null);
     }
@@ -214,9 +221,9 @@ export default function DashboardPage() {
       const result = await refreshFlight(flightPk);
       await loadFlights();
       await loadNotifications();
-      showToast(summarizeRefreshResult(result), result?.changes_detected ? 'info' : 'success');
+      showToast(summarizeRefreshResult(result, t), result?.changes_detected ? 'info' : 'success');
     } catch (e) {
-      showToast(getApiErrorMessage(e, '갱신에 실패했습니다.'), 'error');
+      showToast(getApiErrorMessage(e, t('dashboard.toastRefreshFail')), 'error');
     } finally {
       setActionFlightPk(null);
     }
@@ -227,9 +234,7 @@ export default function DashboardPage() {
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {user && user.email_verified === false && (
           <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50/90 p-4 dark:border-amber-900 dark:bg-amber-950/40 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-amber-950 dark:text-amber-100">
-              이메일 인증이 완료되지 않았습니다. 받은 편지함(스팸함 포함)의 링크를 확인하거나 재발송해 주세요.
-            </p>
+            <p className="text-sm text-amber-950 dark:text-amber-100">{t('dashboard.verifyBanner')}</p>
             <button
               type="button"
               disabled={resendBusy}
@@ -238,13 +243,13 @@ export default function DashboardPage() {
                 const r = await resendVerification();
                 setResendBusy(false);
                 showToast(
-                  r.success ? '인증 메일을 보냈습니다.' : r.error,
+                  r.success ? t('dashboard.toastVerifySent') : r.error,
                   r.success ? 'success' : 'error',
                 );
               }}
               className="shrink-0 rounded-xl bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50"
             >
-              {resendBusy ? '발송 중…' : '인증 메일 재발송'}
+              {resendBusy ? t('dashboard.resending') : t('dashboard.resendMail')}
             </button>
           </div>
         )}
@@ -259,7 +264,7 @@ export default function DashboardPage() {
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <label htmlFor="active-filter" className="text-sm text-slate-600 dark:text-slate-400">
-                상태
+                {t('dashboard.statusLabel')}
               </label>
               <select
                 id="active-filter"
@@ -278,7 +283,7 @@ export default function DashboardPage() {
                 onClick={() => setRegisterOpen(true)}
                 className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
               >
-                비행편 등록
+                {t('dashboard.registerFlight')}
               </button>
             </div>
           </div>
@@ -290,11 +295,9 @@ export default function DashboardPage() {
           )}
 
           {listLoading ? (
-            <p className="text-slate-600 dark:text-slate-400">불러오는 중...</p>
+            <p className="text-slate-600 dark:text-slate-400">{t('common.loading')}</p>
           ) : flights.length === 0 ? (
-            <p className="mb-4 text-slate-600 dark:text-slate-400">
-              등록된 비행편이 없습니다. 상단에서 비행편을 등록해 주세요.
-            </p>
+            <p className="mb-4 text-slate-600 dark:text-slate-400">{t('dashboard.emptyFlights')}</p>
           ) : (
             <ul className="space-y-4">
               {flights.map((f) => {
@@ -329,17 +332,17 @@ export default function DashboardPage() {
         <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
           <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white">내 알림</h2>
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">{t('dashboard.notificationsTitle')}</h2>
               <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
                 <code className="rounded bg-slate-100 px-1 text-xs dark:bg-slate-800">
-                  GET /notifications
+                  {t('dashboard.notificationsApi')}
                 </code>{' '}
-                — JWT 기준으로 등록한 비행편의 알림입니다.
+                {t('dashboard.notificationsHint')}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <label htmlFor="notif-type" className="text-sm text-slate-600 dark:text-slate-400">
-                유형
+                {t('dashboard.typeLabel')}
               </label>
               <select
                 id="notif-type"
@@ -358,7 +361,7 @@ export default function DashboardPage() {
                 onClick={loadNotifications}
                 className="rounded-xl bg-slate-100 px-3 py-2 text-sm hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700"
               >
-                새로고침
+                {t('common.refresh')}
               </button>
             </div>
           </div>
@@ -368,9 +371,9 @@ export default function DashboardPage() {
             </div>
           )}
           {notifLoading ? (
-            <p className="text-sm text-slate-600 dark:text-slate-400">불러오는 중…</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400">{t('common.loading')}</p>
           ) : notifications.length === 0 ? (
-            <p className="text-sm text-slate-600 dark:text-slate-400">알림이 없습니다.</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400">{t('dashboard.emptyNotifications')}</p>
           ) : (
             <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-100 dark:divide-slate-800 dark:border-slate-800">
               {notifications.map((n) => (
@@ -380,17 +383,17 @@ export default function DashboardPage() {
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800 dark:bg-purple-900/50 dark:text-purple-200">
-                      {notificationTypeLabel(n.notification_type)}
+                      {notificationTypeLabel(t, n.notification_type)}
                     </span>
-                    <span className="text-xs text-slate-500">비행편 #{n.flight_pk}</span>
+                    <span className="text-xs text-slate-500">{t('dashboard.flightPkLabel')}{n.flight_pk}</span>
                     <span
                       className={`text-xs ${n.is_sent ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}
                     >
-                      {n.is_sent ? '발송됨' : '미발송'}
+                      {n.is_sent ? t('common.sent') : t('common.notSent')}
                     </span>
                     {n.sent_at && (
                       <span className="text-xs text-slate-400">
-                        {new Date(n.sent_at).toLocaleString('ko-KR')}
+                        {new Date(n.sent_at).toLocaleString(localeTag)}
                       </span>
                     )}
                   </div>
@@ -398,11 +401,13 @@ export default function DashboardPage() {
                     <p className="mt-1 text-sm text-slate-700 dark:text-slate-200">{n.message}</p>
                   )}
                   {n.sent_to && (
-                    <p className="text-xs text-slate-500">수신: {n.sent_to}</p>
+                    <p className="text-xs text-slate-500">
+                      {t('common.recipient')}: {n.sent_to}
+                    </p>
                   )}
                   {n.error_message && (
                     <p className="mt-1 text-xs text-red-600 dark:text-red-400">
-                      오류: {n.error_message}
+                      {t('common.errorPrefix')}: {n.error_message}
                     </p>
                   )}
                 </li>
@@ -413,10 +418,9 @@ export default function DashboardPage() {
 
         <div className="mt-6 rounded-xl border border-indigo-200 bg-indigo-50/80 p-4 dark:border-indigo-900 dark:bg-indigo-950/40">
           <p className="text-sm text-indigo-900 dark:text-indigo-100">
-            인천공항 OpenAPI와 연동되어 등록 시 실제 운항 정보가 채워지며, 스케줄러가 주기적으로 상태를
-            확인합니다. API 주소는 환경 변수{' '}
-            <code className="rounded bg-white/80 px-1 dark:bg-slate-900">VITE_API_BASE_URL</code>로
-            설정합니다.
+            {t('dashboard.footerHint')}{' '}
+            <code className="rounded bg-white/80 px-1 dark:bg-slate-900">VITE_API_BASE_URL</code>{' '}
+            {t('dashboard.footerHint2')}
           </p>
         </div>
       </main>

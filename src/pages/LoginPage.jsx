@@ -22,6 +22,8 @@ function LoginPage() {
     showToast('비밀번호가 변경되었습니다. 로그인해 주세요.', 'success');
     navigate('/login', { replace: true, state: {} });
   }, [location.state, navigate, showToast]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
