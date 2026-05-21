@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Sentry } from './sentry.js';
 import { ThemeProvider } from './context/ThemeContext';
 import { I18nProvider } from './context/I18nContext';
 import { AuthProvider } from './context/AuthContext';
@@ -104,7 +105,17 @@ export default function App() {
         <ThemeProvider>
           <AuthProvider>
             <ToastProvider>
-              <AppRoutes />
+              <Sentry.ErrorBoundary
+                fallback={
+                  <div className="flex min-h-screen items-center justify-center bg-slate-50 p-6 dark:bg-slate-950">
+                    <p className="text-center text-slate-700 dark:text-slate-300">
+                      일시적인 오류가 발생했습니다. 페이지를 새로고침해 주세요.
+                    </p>
+                  </div>
+                }
+              >
+                <AppRoutes />
+              </Sentry.ErrorBoundary>
             </ToastProvider>
           </AuthProvider>
         </ThemeProvider>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import * as authApi from '../api/auth';
 import { getApiErrorMessage } from '../utils/apiError';
 import { AUTH_FORCE_LOGOUT_EVENT } from '../api/axios';
+import { Sentry } from '../sentry.js';
 import { AuthContext } from './auth-context';
 
 export function AuthProvider({ children }) {
@@ -22,10 +23,14 @@ export function AuthProvider({ children }) {
     try {
       const data = await authApi.fetchMe();
       setUser(data);
+      if (data?.user_id != null) {
+        Sentry.setUser({ id: String(data.user_id), email: data.email });
+      }
     } catch {
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
       setUser(null);
+      Sentry.setUser(null);
     } finally {
       setLoading(false);
     }
@@ -43,6 +48,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const handler = () => {
       setUser(null);
+      Sentry.setUser(null);
       if (window.location.pathname !== '/login') {
         navigate('/login', { replace: true });
       }
@@ -76,6 +82,7 @@ export function AuthProvider({ children }) {
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
       setUser(null);
+      Sentry.setUser(null);
       navigate('/login');
     }
   };

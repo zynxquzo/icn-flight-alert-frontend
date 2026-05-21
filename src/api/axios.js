@@ -1,5 +1,6 @@
 // src/api/axios.js
 import axios from 'axios';
+import { Sentry } from '../sentry.js';
 
 /** 401 발생 시 SPA 상태 손실 없이 정리하기 위해 사용하는 커스텀 이벤트명. AuthContext가 listen 함. */
 export const AUTH_FORCE_LOGOUT_EVENT = 'auth:force-logout';
@@ -74,6 +75,14 @@ api.interceptors.response.use(
     const skip = isAuthExemptPath(path);
 
     if (error.response?.status !== 401 || skip) {
+      const status = error.response?.status;
+      const isServerError = status != null && status >= 500;
+      const isNetwork = !error.response && error.code !== 'ERR_CANCELED';
+      if (isServerError || isNetwork) {
+        Sentry.captureException(error, {
+          tags: { path, status: status ?? 'network' },
+        });
+      }
       return Promise.reject(error);
     }
 
