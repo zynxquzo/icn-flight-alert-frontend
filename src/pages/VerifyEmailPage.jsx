@@ -3,22 +3,21 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { verifyEmail } from '../api/auth';
 import { getApiErrorMessage } from '../utils/apiError';
 
+const MISSING_TOKEN_MSG = '토큰이 없습니다. 메일의 링크를 그대로 사용해 주세요.';
+
 export default function VerifyEmailPage() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token') ?? '';
-  const [status, setStatus] = useState('loading');
-  const [message, setMessage] = useState('');
+  const trimmedToken = token.trim();
+  const [status, setStatus] = useState(trimmedToken ? 'loading' : 'error');
+  const [message, setMessage] = useState(trimmedToken ? '' : MISSING_TOKEN_MSG);
 
   useEffect(() => {
-    if (!token.trim()) {
-      setStatus('error');
-      setMessage('토큰이 없습니다. 메일의 링크를 그대로 사용해 주세요.');
-      return;
-    }
+    if (!trimmedToken) return;
     let cancelled = false;
     (async () => {
       try {
-        const data = await verifyEmail(token.trim());
+        const data = await verifyEmail(trimmedToken);
         if (!cancelled) {
           setStatus('ok');
           setMessage(data?.detail ?? '이메일 인증이 완료되었습니다.');
@@ -33,7 +32,7 @@ export default function VerifyEmailPage() {
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [trimmedToken]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-100 to-indigo-100 px-4 dark:from-slate-950 dark:to-indigo-950">

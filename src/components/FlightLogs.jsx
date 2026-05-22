@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { changeTypeLabel, formatIncheonDateTime } from '../utils/format';
-import { useI18n } from '../context/I18nContext';
+import { useI18n } from '../hooks/useI18n';
 
 export default function FlightLogs({
   flightPk,

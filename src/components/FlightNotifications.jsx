@@ -1,6 +1,6 @@
 import Badge from './Badge';
 import { notificationTypeLabel } from '../utils/format';
-import { useI18n } from '../context/I18nContext';
+import { useI18n } from '../hooks/useI18n';
 
 export default function FlightNotifications({ notifications, loading, error, localeTag = 'ko-KR' }) {
   const { t } = useI18n();

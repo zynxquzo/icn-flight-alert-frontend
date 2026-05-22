@@ -1,7 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { messages } from '../i18n/messages';
-
-const I18nContext = createContext(null);
+import { I18nContext } from './i18n-context';
 
 const STORAGE_KEY = 'icn_flight_alert_lang';
 
@@ -60,12 +59,4 @@ export function I18nProvider({ children }) {
   const value = useMemo(() => ({ lang, setLang, t }), [lang, setLang, t]);
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
-}
-
-export function useI18n() {
-  const ctx = useContext(I18nContext);
-  if (ctx == null) {
-    throw new Error('useI18n must be used within I18nProvider');
-  }
-  return ctx;
 }

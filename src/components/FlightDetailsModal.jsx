@@ -4,7 +4,7 @@ import Modal from './Modal';
 import Spinner from './Spinner';
 import { fetchFlightDetail } from '../api/flights';
 import { getApiErrorMessage } from '../utils/apiError';
-import { useI18n } from '../context/I18nContext';
+import { useI18n } from '../hooks/useI18n';
 import {
   flightTypeLabel,
   formatIncheonDateTime,

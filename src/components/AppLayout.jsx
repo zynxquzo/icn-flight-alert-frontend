@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
-import { useI18n } from '../context/I18nContext';
+import { useI18n } from '../hooks/useI18n';
 
 const navClass = ({ isActive }) =>
   `px-3 py-2 rounded-xl text-sm font-medium transition ${

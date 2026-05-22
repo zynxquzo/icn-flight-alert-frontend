@@ -3,7 +3,7 @@ import Modal from './Modal';
 import { createFlight } from '../api/flights';
 import { getApiErrorMessage } from '../utils/apiError';
 import { normalizeFlightId } from '../utils/format';
-import { useI18n } from '../context/I18nContext';
+import { useI18n } from '../hooks/useI18n';
 
 export default function RegisterFlightModal({ open, onClose, onRegistered }) {
   const { t } = useI18n();

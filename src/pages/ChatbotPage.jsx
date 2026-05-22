@@ -3,7 +3,7 @@ import AppLayout from '../components/AppLayout';
 import Badge from '../components/Badge';
 import { fetchChatbotInfo, sendChatMessage } from '../api/chatbot';
 import { getApiErrorMessage } from '../utils/apiError';
-import { useI18n } from '../context/I18nContext';
+import { useI18n } from '../hooks/useI18n';
 
 /** 같은 탭에서만 유지. 탭을 닫으면 브라우저가 sessionStorage를 비움 */
 const CHATBOT_SESSION_KEY = 'icn-flight-alert-chatbot';

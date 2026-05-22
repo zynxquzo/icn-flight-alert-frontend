@@ -4,7 +4,7 @@ import AppLayout from '../components/AppLayout';
 import FlightCard from '../components/FlightCard';
 import RegisterFlightModal from '../components/RegisterFlightModal';
 import FlightDetailsModal from '../components/FlightDetailsModal';
-import { useI18n } from '../context/I18nContext';
+import { useI18n } from '../hooks/useI18n';
 import {
   fetchFlights,
   deleteFlight,
@@ -146,7 +146,7 @@ export default function DashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [panel, logChangeType]);
+  }, [panel, logChangeType, t]);
 
   useEffect(() => {
     if (!panel || panel.tab !== 'notifications') return;
@@ -169,7 +169,7 @@ export default function DashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [panel]);
+  }, [panel, t]);
 
   const toggleLogs = (flightPk) => {
     setPanel((p) => {

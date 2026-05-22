@@ -1,7 +1,7 @@
 import Badge from './Badge';
 import FlightLogs from './FlightLogs';
 import FlightNotifications from './FlightNotifications';
-import { useI18n } from '../context/I18nContext';
+import { useI18n } from '../hooks/useI18n';
 import { flightTypeLabel, formatIncheonDateTime } from '../utils/format';
 
 export default function FlightCard({
