@@ -16,8 +16,7 @@ export default defineConfig([
     },
   },
   {
-    files: ['**/*.{js,jsx}'],
-    ignores: ['e2e/**', 'playwright.config.js', 'vitest.config.js'],
+    files: ['src/**/*.{js,jsx}'],
     extends: [
       js.configs.recommended,
       reactHooks.configs.flat.recommended,
