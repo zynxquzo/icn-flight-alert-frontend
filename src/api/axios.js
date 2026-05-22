@@ -13,7 +13,8 @@ const api = axios.create({
   },
 });
 
-function requestPath(config) {
+/** @internal 테스트·디버깅용 */
+export function requestPath(config) {
   const u = config?.url ?? '';
   if (!u) return '';
   if (u.startsWith('http')) {
@@ -26,7 +27,8 @@ function requestPath(config) {
   return u.split('?')[0];
 }
 
-function isAuthExemptPath(path) {
+/** @internal 테스트·디버깅용 */
+export function isAuthExemptPath(path) {
   return (
     path.includes('/auth/login') ||
     path.includes('/auth/signup') ||

@@ -214,8 +214,30 @@ npm run preview
 | `npm run build` | 프로덕션 빌드 |
 | `npm run preview` | 빌드 미리보기 |
 | `npm run lint` | ESLint (React Hooks, React Refresh 등) |
+| `npm run test` | Vitest 단위 테스트 (`format.js`, `axios` 401·refresh) |
+| `npm run test:watch` | Vitest watch 모드 |
+| `npm run test:e2e` | Playwright E2E (백엔드·테스트 계정 필요) |
 
-배포·PR 전에 `npm run lint` 및 `npm run build` 로 확인하는 것을 권장합니다.
+배포·PR 전에 `npm run lint`, `npm run test`, `npm run build` 로 확인하는 것을 권장합니다.
+
+### 단위 테스트
+
+```bash
+npm install
+npm run test
+```
+
+### E2E (선택)
+
+백엔드(`http://127.0.0.1:8000`)와 테스트 계정이 있을 때:
+
+```bash
+set PLAYWRIGHT_TEST_EMAIL=you@example.com
+set PLAYWRIGHT_TEST_PASSWORD=your-password
+npm run test:e2e
+```
+
+계정이 없으면 E2E 시나리오는 자동으로 스킵됩니다.
 
 ---
 

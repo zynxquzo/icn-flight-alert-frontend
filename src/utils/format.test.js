@@ -1,0 +1,122 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  formatIncheonDateTime,
+  normalizeFlightId,
+  parseIncheonDateTimeToDate,
+  shouldPollFlightSoon,
+  summarizeRefreshResult,
+  terminalForChatOption,
+} from './format.js';
+
+describe('formatIncheonDateTime', () => {
+  it('formats 12-char Incheon datetime', () => {
+    expect(formatIncheonDateTime('202605221030')).toBe('2026-05-22 10:30');
+  });
+
+  it('returns em dash for empty', () => {
+    expect(formatIncheonDateTime(null)).toBe('—');
+    expect(formatIncheonDateTime('')).toBe('—');
+  });
+
+  it('returns raw string when too short', () => {
+    expect(formatIncheonDateTime('202605')).toBe('202605');
+  });
+});
+
+describe('normalizeFlightId', () => {
+  it('trims, uppercases, removes spaces', () => {
+    expect(normalizeFlightId(' ke 123 ')).toBe('KE123');
+  });
+});
+
+describe('parseIncheonDateTimeToDate', () => {
+  it('parses local calendar components', () => {
+    const d = parseIncheonDateTimeToDate('202605221430');
+    expect(d).not.toBeNull();
+    expect(d.getFullYear()).toBe(2026);
+    expect(d.getMonth()).toBe(4);
+    expect(d.getDate()).toBe(22);
+    expect(d.getHours()).toBe(14);
+    expect(d.getMinutes()).toBe(30);
+  });
+
+  it('returns null for invalid input', () => {
+    expect(parseIncheonDateTimeToDate('')).toBeNull();
+    expect(parseIncheonDateTimeToDate('2026')).toBeNull();
+  });
+});
+
+describe('shouldPollFlightSoon', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 4, 22, 8, 0, 0));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('returns true when active and departure within 3 hours', () => {
+    const flight = {
+      is_active: true,
+      schedule_date_time: '202605221030',
+      estimated_date_time: null,
+    };
+    expect(shouldPollFlightSoon(flight)).toBe(true);
+  });
+
+  it('returns false when inactive', () => {
+    expect(
+      shouldPollFlightSoon({
+        is_active: false,
+        schedule_date_time: '202605221030',
+      }),
+    ).toBe(false);
+  });
+
+  it('returns false when more than 3 hours away', () => {
+    expect(
+      shouldPollFlightSoon({
+        is_active: true,
+        schedule_date_time: '202605221800',
+      }),
+    ).toBe(false);
+  });
+
+  it('returns false when schedule is in the past', () => {
+    expect(
+      shouldPollFlightSoon({
+        is_active: true,
+        schedule_date_time: '202605220700',
+      }),
+    ).toBe(false);
+  });
+});
+
+describe('terminalForChatOption', () => {
+  it('maps terminal id to T1 or T2', () => {
+    expect(terminalForChatOption('P03')).toBe('T1');
+    expect(terminalForChatOption('T2')).toBe('T2');
+    expect(terminalForChatOption('2')).toBe('T2');
+  });
+});
+
+describe('summarizeRefreshResult', () => {
+  it('reports no changes', () => {
+    expect(summarizeRefreshResult({ changes_detected: false, changes: [] })).toContain(
+      '변경',
+    );
+  });
+
+  it('summarizes detected changes', () => {
+    const msg = summarizeRefreshResult({
+      changes_detected: true,
+      changes: [
+        { change_type: 'gate_change', old_value: '114', new_value: '115' },
+      ],
+    });
+    expect(msg).toContain('게이트');
+    expect(msg).toContain('114');
+    expect(msg).toContain('115');
+  });
+});
