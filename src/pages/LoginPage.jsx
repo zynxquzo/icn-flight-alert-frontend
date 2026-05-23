@@ -19,7 +19,7 @@ function LoginPage() {
 
   useEffect(() => {
     if (!location.state?.resetOk) return;
-    showToast('비밀번호가 변경되었습니다. 로그인해 주세요.', 'success');
+    showToast(t('login.resetOkToast'), 'success');
     navigate('/login', { replace: true, state: {} });
   }, [location.state, navigate, showToast]);
 

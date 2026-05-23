@@ -21,6 +21,7 @@ export const messages = {
       signupCta: '회원가입',
       noAccount: '계정이 없으신가요?',
       forgot: '비밀번호를 잊으셨나요?',
+      resetOkToast: '비밀번호가 변경되었습니다. 로그인해 주세요.',
     },
     common: {
       loading: '불러오는 중…',
@@ -250,6 +251,7 @@ export const messages = {
       signupCta: 'Sign up',
       noAccount: 'No account?',
       forgot: 'Forgot password?',
+      resetOkToast: 'Password changed. Please sign in.',
     },
     common: {
       loading: 'Loading…',
