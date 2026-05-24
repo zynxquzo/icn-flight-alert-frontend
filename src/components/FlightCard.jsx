@@ -3,6 +3,14 @@ import FlightLogs from './FlightLogs';
 import FlightNotifications from './FlightNotifications';
 import { useI18n } from '../hooks/useI18n';
 import { flightTypeLabel, formatIncheonDateTime } from '../utils/format';
+import { createShareLink, getCalendarUrl, revokeShareLink } from '../api/flights';
+
+const SYNC_STATUS_CLASSES = {
+  ok: 'text-green-600 dark:text-green-400',
+  failed: 'text-red-500 dark:text-red-400',
+  pending: 'text-amber-500 dark:text-amber-400',
+  manual: 'text-slate-400 dark:text-slate-500',
+};
 
 export default function FlightCard({
   flight,
@@ -22,12 +30,55 @@ export default function FlightCard({
   onToggleActive,
   onDelete,
   onOpenDetails,
+  onFlightUpdate,
 }) {
   const { t, lang } = useI18n();
   const localeTag = lang === 'en' ? 'en-US' : 'ko-KR';
   const typeLabel = flightTypeLabel(t, flight.flight_type);
   const isLogsOpen = panel?.flightPk === flight.flight_pk && panel.tab === 'logs';
   const isNotifsOpen = panel?.flightPk === flight.flight_pk && panel.tab === 'notifications';
+
+  const handleDownloadIcs = () => {
+    const url = getCalendarUrl(flight.flight_pk);
+    // 인증 토큰을 헤더에 넣어야 해서 fetch + blob 방식 사용
+    const token = localStorage.getItem('access_token');
+    fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      .then((r) => r.blob())
+      .then((blob) => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `flight_${flight.flight_id || flight.flight_pk}.ics`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      })
+      .catch(console.error);
+  };
+
+  const handleShare = async () => {
+    try {
+      const updated = await createShareLink(flight.flight_pk);
+      if (updated.share_token) {
+        const shareUrl = `${window.location.origin}/flights/shared/${updated.share_token}`;
+        await navigator.clipboard.writeText(shareUrl);
+        alert(t('flightCard.shareCopied'));
+        if (onFlightUpdate) onFlightUpdate(updated);
+      }
+    } catch {
+      alert(t('flightCard.shareFail'));
+    }
+  };
+
+  const handleRevokeShare = async () => {
+    try {
+      await revokeShareLink(flight.flight_pk);
+      if (onFlightUpdate) onFlightUpdate({ ...flight, share_token: null });
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const syncStatus = flight.api_sync_status;
+  const syncLabel = syncStatus ? t(`flightCard.sync${syncStatus.charAt(0).toUpperCase() + syncStatus.slice(1)}`) : null;
 
   return (
     <li className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/60 dark:shadow-none">
@@ -41,6 +92,11 @@ export default function FlightCard({
             <Badge variant={flight.is_active ? 'success' : 'default'}>
               {flight.is_active ? t('flightCard.monitoringOn') : t('flightCard.inactive')}
             </Badge>
+            {syncLabel && (
+              <span className={`text-xs ${SYNC_STATUS_CLASSES[syncStatus] || 'text-slate-400'}`}>
+                {syncLabel}
+              </span>
+            )}
           </div>
           <p className="text-sm text-slate-600 dark:text-slate-400">
             {flight.flight_date} · {flight.airline || t('flightCard.airlinePending')}
@@ -86,6 +142,38 @@ export default function FlightCard({
           >
             {t('flightCard.refresh')}
           </button>
+          {/* ICS 다운로드 */}
+          <button
+            type="button"
+            disabled={busy}
+            onClick={handleDownloadIcs}
+            title={t('flightCard.downloadIcs')}
+            className="rounded-xl bg-teal-50 px-3 py-2 text-sm text-teal-700 hover:bg-teal-100 disabled:opacity-50 dark:bg-teal-950/40 dark:text-teal-200 dark:hover:bg-teal-900/40"
+          >
+            📅
+          </button>
+          {/* 공유 링크 */}
+          {flight.share_token ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={handleRevokeShare}
+              title={t('flightCard.revokeShare')}
+              className="rounded-xl bg-orange-50 px-3 py-2 text-sm text-orange-700 hover:bg-orange-100 disabled:opacity-50 dark:bg-orange-950/40 dark:text-orange-200 dark:hover:bg-orange-900/40"
+            >
+              🔗✕
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={handleShare}
+              title={t('flightCard.shareLink')}
+              className="rounded-xl bg-orange-50 px-3 py-2 text-sm text-orange-700 hover:bg-orange-100 disabled:opacity-50 dark:bg-orange-950/40 dark:text-orange-200 dark:hover:bg-orange-900/40"
+            >
+              🔗
+            </button>
+          )}
           <button
             type="button"
             disabled={busy}

@@ -40,3 +40,31 @@ export async function refreshFlight(flightPk) {
   const { data } = await api.post(`/flights/${flightPk}/refresh`);
   return data;
 }
+
+/**
+ * GET /flights/{flight_pk}/calendar.ics — iCalendar 파일 다운로드
+ * 브라우저에서 직접 <a href> 방식으로 내려받도록 URL 반환
+ */
+export function getCalendarUrl(flightPk) {
+  const base = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+  return `${base}/flights/${flightPk}/calendar.ics`;
+}
+
+/** POST /flights/{flight_pk}/share — 공유 링크 토큰 생성 */
+export async function createShareLink(flightPk) {
+  const { data } = await api.post(`/flights/${flightPk}/share`);
+  return data;
+}
+
+/** DELETE /flights/{flight_pk}/share — 공유 링크 취소 */
+export async function revokeShareLink(flightPk) {
+  await api.delete(`/flights/${flightPk}/share`);
+}
+
+/**
+ * GET /flights/shared/{share_token} — 공개 읽기 전용 (인증 없이)
+ */
+export async function fetchSharedFlight(shareToken) {
+  const { data } = await api.get(`/flights/shared/${shareToken}`);
+  return data;
+}

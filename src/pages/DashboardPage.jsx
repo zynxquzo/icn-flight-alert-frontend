@@ -322,6 +322,11 @@ export default function DashboardPage() {
                     onToggleActive={handleToggleActive}
                     onDelete={handleDelete}
                     onOpenDetails={setDetailPk}
+                    onFlightUpdate={(updated) =>
+                      setFlights((prev) =>
+                        prev.map((x) => (x.flight_pk === updated.flight_pk ? { ...x, ...updated } : x)),
+                      )
+                    }
                   />
                 );
               })}
