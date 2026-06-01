@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   formatIncheonDateTime,
+  formatIsoDateTime,
   normalizeFlightId,
   parseIncheonDateTimeToDate,
   shouldPollFlightSoon,
@@ -20,6 +21,19 @@ describe('formatIncheonDateTime', () => {
 
   it('returns raw string when too short', () => {
     expect(formatIncheonDateTime('202605')).toBe('202605');
+  });
+});
+
+describe('formatIsoDateTime', () => {
+  it('returns em dash for falsy input', () => {
+    expect(formatIsoDateTime(null)).toBe('—');
+    expect(formatIsoDateTime('')).toBe('—');
+  });
+
+  it('formats ISO string with given locale', () => {
+    const result = formatIsoDateTime('2026-06-02T10:30:00.000Z', 'en-US');
+    expect(typeof result).toBe('string');
+    expect(result.length).toBeGreaterThan(0);
   });
 });
 
