@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  flightTypeLabel,
   formatIncheonDateTime,
   formatIsoDateTime,
   normalizeFlightId,
+  notificationTypeLabel,
   parseIncheonDateTimeToDate,
   shouldPollFlightSoon,
   summarizeRefreshResult,
@@ -104,6 +106,38 @@ describe('shouldPollFlightSoon', () => {
         schedule_date_time: '202605220700',
       }),
     ).toBe(false);
+  });
+});
+
+describe('flightTypeLabel', () => {
+  it('returns translated label when t resolves the key', () => {
+    const t = (key) => (key === 'enums.flightType.departure' ? '출발' : key);
+    expect(flightTypeLabel(t, 'departure')).toBe('출발');
+  });
+
+  it('falls back to built-in map when t is not provided', () => {
+    expect(flightTypeLabel(null, 'arrival')).toBe('도착');
+    expect(flightTypeLabel(null, 'departure')).toBe('출발');
+  });
+
+  it('returns em dash for unknown type', () => {
+    expect(flightTypeLabel(null, undefined)).toBe('—');
+  });
+});
+
+describe('notificationTypeLabel', () => {
+  it('returns translated label when t resolves the key', () => {
+    const t = (key) => (key === 'enums.notificationType.delay' ? '지연' : key);
+    expect(notificationTypeLabel(t, 'delay')).toBe('지연');
+  });
+
+  it('falls back to built-in map when t is not provided', () => {
+    expect(notificationTypeLabel(null, 'gate_change')).toBe('게이트 변경');
+    expect(notificationTypeLabel(null, 'cancel')).toBe('취소');
+  });
+
+  it('returns unknown type as-is', () => {
+    expect(notificationTypeLabel(null, 'unknown_type')).toBe('unknown_type');
   });
 });
 
