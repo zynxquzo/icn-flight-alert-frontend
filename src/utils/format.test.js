@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  changeTypeLabel,
   flightTypeLabel,
   formatIncheonDateTime,
   formatIsoDateTime,
@@ -138,6 +139,23 @@ describe('notificationTypeLabel', () => {
 
   it('returns unknown type as-is', () => {
     expect(notificationTypeLabel(null, 'unknown_type')).toBe('unknown_type');
+  });
+});
+
+describe('changeTypeLabel', () => {
+  it('returns translated label when t resolves the key', () => {
+    const t = (key) => (key === 'enums.changeType.delay' ? '지연' : key);
+    expect(changeTypeLabel(t, 'delay')).toBe('지연');
+  });
+
+  it('falls back to built-in map when t is not provided', () => {
+    expect(changeTypeLabel(null, 'gate_change')).toBe('게이트 변경');
+    expect(changeTypeLabel(null, 'status_change')).toBe('상태 변경');
+    expect(changeTypeLabel(null, 'eta_adjust')).toBe('예정 시각 조정');
+  });
+
+  it('returns fallback for unknown type', () => {
+    expect(changeTypeLabel(null, 'unknown')).toBe('unknown');
   });
 });
 
