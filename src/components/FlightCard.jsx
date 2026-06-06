@@ -40,22 +40,22 @@ export default function FlightCard({
   const isLogsOpen = panel?.flightPk === flight.flight_pk && panel.tab === 'logs';
   const isNotifsOpen = panel?.flightPk === flight.flight_pk && panel.tab === 'notifications';
 
-  const handleDownloadIcs = () => {
+  const handleDownloadIcs = async () => {
     const url = getCalendarUrl(flight.flight_pk);
-    // 인증 토큰을 헤더에 넣어야 해서 fetch + blob 방식 사용
     const token = localStorage.getItem('access_token');
-    fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
-      .then((r) => r.blob())
-      .then((blob) => {
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `flight_${flight.flight_id || flight.flight_pk}.ics`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(a.href);
-      })
-      .catch(() => showToast(t('flightCard.downloadIcsFail'), 'error'));
+    try {
+      const r = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      const blob = await r.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `flight_${flight.flight_id || flight.flight_pk}.ics`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+    } catch {
+      showToast(t('flightCard.downloadIcsFail'), 'error');
+    }
   };
 
   const handleShare = async () => {
