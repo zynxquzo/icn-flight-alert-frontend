@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   changeTypeLabel,
+  estimateWaitHoursUntilSchedule,
   flightTypeLabel,
   formatIncheonDateTime,
   formatIsoDateTime,
@@ -44,6 +45,12 @@ describe('normalizeFlightId', () => {
   it('trims, uppercases, removes spaces', () => {
     expect(normalizeFlightId(' ke 123 ')).toBe('KE123');
   });
+
+  it('returns empty string for null / undefined / empty', () => {
+    expect(normalizeFlightId(null)).toBe('');
+    expect(normalizeFlightId(undefined)).toBe('');
+    expect(normalizeFlightId('')).toBe('');
+  });
 });
 
 describe('parseIncheonDateTimeToDate', () => {
@@ -60,6 +67,37 @@ describe('parseIncheonDateTimeToDate', () => {
   it('returns null for invalid input', () => {
     expect(parseIncheonDateTimeToDate('')).toBeNull();
     expect(parseIncheonDateTimeToDate('2026')).toBeNull();
+  });
+});
+
+describe('estimateWaitHoursUntilSchedule', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 4, 22, 8, 0, 0));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('returns positive hours when flight is in the future', () => {
+    const h = estimateWaitHoursUntilSchedule('202605221030', null);
+    expect(h).toBeCloseTo(2.5, 1);
+  });
+
+  it('prefers estimatedStr over scheduleStr when both given', () => {
+    const h = estimateWaitHoursUntilSchedule('202605221030', '202605220900');
+    expect(h).toBeCloseTo(1, 1);
+  });
+
+  it('returns negative hours when flight is in the past', () => {
+    const h = estimateWaitHoursUntilSchedule('202605220700', null);
+    expect(h).toBeLessThan(0);
+  });
+
+  it('returns null for invalid input', () => {
+    expect(estimateWaitHoursUntilSchedule('', null)).toBeNull();
+    expect(estimateWaitHoursUntilSchedule(null, null)).toBeNull();
   });
 });
 
