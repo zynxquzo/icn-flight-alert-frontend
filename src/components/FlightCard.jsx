@@ -2,6 +2,7 @@ import Badge from './Badge';
 import FlightLogs from './FlightLogs';
 import FlightNotifications from './FlightNotifications';
 import { useI18n } from '../hooks/useI18n';
+import { useToast } from '../hooks/useToast';
 import { flightTypeLabel, formatIncheonDateTime } from '../utils/format';
 import { createShareLink, getCalendarUrl, revokeShareLink } from '../api/flights';
 
@@ -33,6 +34,7 @@ export default function FlightCard({
   onFlightUpdate,
 }) {
   const { t, lang } = useI18n();
+  const { showToast } = useToast();
   const localeTag = lang === 'en' ? 'en-US' : 'ko-KR';
   const typeLabel = flightTypeLabel(t, flight.flight_type);
   const isLogsOpen = panel?.flightPk === flight.flight_pk && panel.tab === 'logs';
@@ -51,7 +53,7 @@ export default function FlightCard({
         a.click();
         URL.revokeObjectURL(a.href);
       })
-      .catch(console.error);
+      .catch(() => showToast(t('flightCard.downloadIcsFail'), 'error'));
   };
 
   const handleShare = async () => {
@@ -60,11 +62,11 @@ export default function FlightCard({
       if (updated.share_token) {
         const shareUrl = `${window.location.origin}/flights/shared/${updated.share_token}`;
         await navigator.clipboard.writeText(shareUrl);
-        alert(t('flightCard.shareCopied'));
+        showToast(t('flightCard.shareCopied'), 'success');
         if (onFlightUpdate) onFlightUpdate(updated);
       }
     } catch {
-      alert(t('flightCard.shareFail'));
+      showToast(t('flightCard.shareFail'), 'error');
     }
   };
 
