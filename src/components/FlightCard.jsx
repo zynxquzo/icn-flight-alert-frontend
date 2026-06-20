@@ -45,6 +45,7 @@ export default function FlightCard({
     const token = localStorage.getItem('access_token');
     try {
       const r = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      if (!r.ok) throw new Error(r.statusText);
       const blob = await r.blob();
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
