@@ -75,7 +75,7 @@ export default function FlightCard({
       await revokeShareLink(flight.flight_pk);
       if (onFlightUpdate) onFlightUpdate({ ...flight, share_token: null });
     } catch {
-      /* ignore */
+      showToast(t('flightCard.revokeShareFail'), 'error');
     }
   };
 
