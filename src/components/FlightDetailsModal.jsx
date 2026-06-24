@@ -40,7 +40,7 @@ export default function FlightDetailsModal({ flightPk, onClose }) {
     return () => {
       cancelled = true;
     };
-  }, [flightPk, t]);
+  }, [flightPk]);
 
   const row = (label, value) => (
     <div className="flex flex-col gap-0.5 border-b border-slate-100 py-2 last:border-0 dark:border-slate-800 sm:flex-row sm:justify-between">
