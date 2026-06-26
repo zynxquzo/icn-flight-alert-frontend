@@ -50,7 +50,9 @@ export default function FlightCard({
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
         a.download = `flight_${flight.flight_id || flight.flight_pk}.ics`;
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
         URL.revokeObjectURL(a.href);
       })
       .catch(() => showToast(t('flightCard.downloadIcsFail'), 'error'));
