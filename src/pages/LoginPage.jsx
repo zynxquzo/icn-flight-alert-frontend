@@ -21,7 +21,7 @@ function LoginPage() {
     if (!location.state?.resetOk) return;
     showToast(t('login.resetOkToast'), 'success');
     navigate('/login', { replace: true, state: {} });
-  }, [location.state, navigate, showToast]);
+  }, [location.state, navigate, showToast, t]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
