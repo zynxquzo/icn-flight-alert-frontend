@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Modal from './Modal';
 import { createFlight } from '../api/flights';
 import { getApiErrorMessage } from '../utils/apiError';
@@ -13,6 +13,7 @@ export default function RegisterFlightModal({ open, onClose, onRegistered }) {
   const [registerError, setRegisterError] = useState('');
   const [registerSubmitting, setRegisterSubmitting] = useState(false);
   const [registerSuccess, setRegisterSuccess] = useState('');
+  const closeTimeoutRef = useRef(null);
 
   useEffect(() => {
     if (!open) return;
@@ -25,8 +26,13 @@ export default function RegisterFlightModal({ open, onClose, onRegistered }) {
     setFlightDate((prev) => prev || `${y}-${m}-${d}`);
   }, [open]);
 
+  useEffect(() => {
+    return () => clearTimeout(closeTimeoutRef.current);
+  }, []);
+
   const closeRegister = () => {
     if (registerSubmitting) return;
+    clearTimeout(closeTimeoutRef.current);
     setFlightId('');
     setRegisterError('');
     setRegisterSuccess('');
@@ -67,7 +73,8 @@ export default function RegisterFlightModal({ open, onClose, onRegistered }) {
       }
       setFlightId('');
       onRegistered?.();
-      setTimeout(
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = setTimeout(
         () => {
           closeRegister();
         },
