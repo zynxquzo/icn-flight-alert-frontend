@@ -40,6 +40,8 @@ export default function FlightDetailsModal({ flightPk, onClose }) {
     return () => {
       cancelled = true;
     };
+    // t는 언어 전환마다 새 참조를 반환하므로 의도적으로 의존성에서 제외 (재요청 방지)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flightPk]);
 
   const row = (label, value) => (
