@@ -1,3 +1,5 @@
+import { useI18n } from '../hooks/useI18n';
+
 function toastStyles(type) {
   switch (type) {
     case 'success':
@@ -10,6 +12,7 @@ function toastStyles(type) {
 }
 
 export default function Toaster({ toasts, onDismiss }) {
+  const { t } = useI18n();
   if (!toasts.length) return null;
 
   return (
@@ -17,18 +20,18 @@ export default function Toaster({ toasts, onDismiss }) {
       className="fixed bottom-4 right-4 z-[100] flex max-w-sm flex-col gap-2 pointer-events-none"
       aria-live="polite"
     >
-      {toasts.map((t) => (
+      {toasts.map((toast) => (
         <div
-          key={t.id}
-          className={`pointer-events-auto flex items-start gap-2 rounded-xl border px-4 py-3 text-sm shadow-lg ${toastStyles(t.type)}`}
+          key={toast.id}
+          className={`pointer-events-auto flex items-start gap-2 rounded-xl border px-4 py-3 text-sm shadow-lg ${toastStyles(toast.type)}`}
           role="status"
         >
-          <p className="flex-1 leading-snug">{t.message}</p>
+          <p className="flex-1 leading-snug">{toast.message}</p>
           <button
             type="button"
-            onClick={() => onDismiss(t.id)}
+            onClick={() => onDismiss(toast.id)}
             className="shrink-0 rounded-lg px-1.5 py-0.5 text-lg leading-none opacity-70 hover:opacity-100"
-            aria-label="닫기"
+            aria-label={t('common.close')}
           >
             ×
           </button>

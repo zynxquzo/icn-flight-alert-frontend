@@ -32,6 +32,7 @@ export const messages = {
       to: '→',
       recipient: '수신',
       errorPrefix: '오류',
+      close: '닫기',
     },
     enums: {
       flightType: { departure: '출발', arrival: '도착' },
@@ -264,6 +265,7 @@ export const messages = {
       to: '→',
       recipient: 'To',
       errorPrefix: 'Error',
+      close: 'Close',
     },
     enums: {
       flightType: { departure: 'Departure', arrival: 'Arrival' },
