@@ -22,6 +22,9 @@ export const messages = {
       noAccount: '계정이 없으신가요?',
       forgot: '비밀번호를 잊으셨나요?',
       resetOkToast: '비밀번호가 변경되었습니다. 로그인해 주세요.',
+      loginFail: '로그인에 실패했습니다.',
+      signupFail: '회원가입에 실패했습니다.',
+      resendFail: '재발송에 실패했습니다.',
     },
     common: {
       loading: '불러오는 중…',
@@ -255,6 +258,9 @@ export const messages = {
       noAccount: 'No account?',
       forgot: 'Forgot password?',
       resetOkToast: 'Password changed. Please sign in.',
+      loginFail: 'Login failed.',
+      signupFail: 'Sign up failed.',
+      resendFail: 'Failed to resend the email.',
     },
     common: {
       loading: 'Loading…',

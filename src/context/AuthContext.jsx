@@ -5,11 +5,13 @@ import { getApiErrorMessage } from '../utils/apiError';
 import { AUTH_FORCE_LOGOUT_EVENT } from '../api/axios';
 import { Sentry } from '../sentry.js';
 import { AuthContext } from './auth-context';
+import { useI18n } from '../hooks/useI18n';
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { t } = useI18n();
 
   useEffect(() => {
     const legacy = localStorage.getItem('token');
@@ -68,7 +70,7 @@ export function AuthProvider({ children }) {
     } catch (error) {
       return {
         success: false,
-        error: getApiErrorMessage(error, '로그인에 실패했습니다.'),
+        error: getApiErrorMessage(error, t('login.loginFail')),
       };
     }
   };
@@ -100,7 +102,7 @@ export function AuthProvider({ children }) {
     } catch (error) {
       return {
         success: false,
-        error: getApiErrorMessage(error, '회원가입에 실패했습니다.'),
+        error: getApiErrorMessage(error, t('login.signupFail')),
       };
     }
   };
@@ -112,7 +114,7 @@ export function AuthProvider({ children }) {
     } catch (error) {
       return {
         success: false,
-        error: getApiErrorMessage(error, '재발송에 실패했습니다.'),
+        error: getApiErrorMessage(error, t('login.resendFail')),
       };
     }
   };
