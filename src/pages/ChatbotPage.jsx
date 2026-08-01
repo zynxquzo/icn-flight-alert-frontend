@@ -184,7 +184,7 @@ export default function ChatbotPage() {
       setMessages([]);
       setSessions((prev) => [session, ...prev]);
     } catch (e) {
-      console.error('새 세션 생성 실패', e);
+      setInfoError(getApiErrorMessage(e, t('chatbot.errNewSession')));
     }
   };
 
