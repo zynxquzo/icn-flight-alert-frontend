@@ -4,6 +4,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { I18nProvider } from './context/I18nContext';
 import { AuthProvider } from './context/AuthContext';
 import { useAuth } from './hooks/useAuth';
+import { useI18n } from './hooks/useI18n';
 import { ToastProvider } from './context/ToastContext';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
@@ -15,11 +16,12 @@ import VerifyEmailPage from './pages/VerifyEmailPage';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
+  const { t } = useI18n();
 
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <div className="text-lg text-slate-600 dark:text-slate-400">로딩 중...</div>
+        <div className="text-lg text-slate-600 dark:text-slate-400">{t('common.loading')}</div>
       </div>
     );
   }
@@ -29,11 +31,12 @@ function ProtectedRoute({ children }) {
 
 function PublicRoute({ children }) {
   const { user, loading } = useAuth();
+  const { t } = useI18n();
 
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <div className="text-lg text-slate-600 dark:text-slate-400">로딩 중...</div>
+        <div className="text-lg text-slate-600 dark:text-slate-400">{t('common.loading')}</div>
       </div>
     );
   }
