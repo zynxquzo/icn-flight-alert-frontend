@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { resetPassword } from '../api/auth';
 import { getApiErrorMessage } from '../utils/apiError';
+import { useI18n } from '../hooks/useI18n';
 
 export default function ResetPasswordPage() {
+  const { t } = useI18n();
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token') ?? '';
   const navigate = useNavigate();
@@ -16,15 +18,15 @@ export default function ResetPasswordPage() {
     e.preventDefault();
     setError('');
     if (password.length < 8) {
-      setError('비밀번호는 최소 8자 이상이어야 합니다.');
+      setError(t('resetPassword.errMinLen'));
       return;
     }
     if (password !== password2) {
-      setError('비밀번호가 일치하지 않습니다.');
+      setError(t('resetPassword.errMismatch'));
       return;
     }
     if (!token.trim()) {
-      setError('유효한 재설정 링크가 아닙니다.');
+      setError(t('resetPassword.errNoToken'));
       return;
     }
     setLoading(true);
@@ -32,7 +34,7 @@ export default function ResetPasswordPage() {
       await resetPassword({ token: token.trim(), new_password: password });
       navigate('/login', { replace: true, state: { resetOk: true } });
     } catch (err) {
-      setError(getApiErrorMessage(err, '재설정에 실패했습니다.'));
+      setError(getApiErrorMessage(err, t('resetPassword.resetFail')));
     } finally {
       setLoading(false);
     }
@@ -41,10 +43,10 @@ export default function ResetPasswordPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-100 to-indigo-100 px-4 dark:from-slate-950 dark:to-indigo-950">
       <div className="w-full max-w-md rounded-2xl border border-slate-200/80 bg-white p-8 shadow-xl dark:border-slate-700 dark:bg-slate-900">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">새 비밀번호 설정</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('resetPassword.title')}</h1>
         {!token.trim() && (
           <p className="mt-3 text-sm text-red-600 dark:text-red-400">
-            링크에 토큰이 없습니다. 이메일의 링크를 다시 열어 주세요.
+            {t('resetPassword.noToken')}
           </p>
         )}
 
@@ -57,7 +59,7 @@ export default function ResetPasswordPage() {
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div>
             <label htmlFor="np1" className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-              새 비밀번호
+              {t('resetPassword.newPassword')}
             </label>
             <input
               id="np1"
@@ -72,7 +74,7 @@ export default function ResetPasswordPage() {
           </div>
           <div>
             <label htmlFor="np2" className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-              새 비밀번호 확인
+              {t('resetPassword.confirmPassword')}
             </label>
             <input
               id="np2"
@@ -88,13 +90,13 @@ export default function ResetPasswordPage() {
             disabled={loading || !token.trim()}
             className="w-full rounded-xl bg-indigo-600 py-3 font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
           >
-            {loading ? '저장 중…' : '비밀번호 저장'}
+            {loading ? t('resetPassword.saving') : t('resetPassword.submit')}
           </button>
         </form>
 
         <p className="mt-6 text-center text-sm">
           <Link to="/login" className="font-medium text-indigo-600 dark:text-indigo-400">
-            로그인
+            {t('resetPassword.login')}
           </Link>
         </p>
       </div>

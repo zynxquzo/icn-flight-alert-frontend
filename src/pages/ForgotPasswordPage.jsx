@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { forgotPassword } from '../api/auth';
 import { getApiErrorMessage } from '../utils/apiError';
+import { useI18n } from '../hooks/useI18n';
 
 export default function ForgotPasswordPage() {
+  const { t } = useI18n();
   const [email, setEmail] = useState('');
   const [done, setDone] = useState(false);
   const [error, setError] = useState('');
@@ -17,7 +19,7 @@ export default function ForgotPasswordPage() {
       await forgotPassword({ email });
       setDone(true);
     } catch (err) {
-      setError(getApiErrorMessage(err, '요청 처리에 실패했습니다.'));
+      setError(getApiErrorMessage(err, t('forgotPassword.requestFail')));
     } finally {
       setLoading(false);
     }
@@ -26,14 +28,14 @@ export default function ForgotPasswordPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-100 to-indigo-100 px-4 dark:from-slate-950 dark:to-indigo-950">
       <div className="w-full max-w-md rounded-2xl border border-slate-200/80 bg-white p-8 shadow-xl dark:border-slate-700 dark:bg-slate-900">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">비밀번호 재설정</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('forgotPassword.title')}</h1>
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-          가입 시 사용한 이메일을 입력하세요. 등록된 주소면 재설정 링크를 보냅니다.
+          {t('forgotPassword.subtitle')}
         </p>
 
         {done && (
           <p className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100">
-            요청을 접수했습니다. 메일함을 확인해 주세요.
+            {t('forgotPassword.done')}
           </p>
         )}
 
@@ -47,7 +49,7 @@ export default function ForgotPasswordPage() {
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <div>
               <label htmlFor="fp-email" className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                이메일
+                {t('forgotPassword.email')}
               </label>
               <input
                 id="fp-email"
@@ -63,14 +65,14 @@ export default function ForgotPasswordPage() {
               disabled={loading}
               className="w-full rounded-xl bg-indigo-600 py-3 font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
             >
-              {loading ? '처리 중…' : '링크 보내기'}
+              {loading ? t('forgotPassword.sending') : t('forgotPassword.submit')}
             </button>
           </form>
         )}
 
         <p className="mt-6 text-center text-sm">
           <Link to="/login" className="font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400">
-            로그인으로 돌아가기
+            {t('forgotPassword.backToLogin')}
           </Link>
         </p>
       </div>
