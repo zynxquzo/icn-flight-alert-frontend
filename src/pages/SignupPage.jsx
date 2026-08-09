@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useToast } from '../hooks/useToast';
+import { useI18n } from '../hooks/useI18n';
 
 function SignupPage() {
+  const { t } = useI18n();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
@@ -59,7 +61,7 @@ function SignupPage() {
       <div className="w-full max-w-md rounded-2xl border border-slate-200/80 bg-white p-8 shadow-xl dark:border-slate-700 dark:bg-slate-900">
         <div className="mb-8 text-center">
           <div className="mb-2 text-4xl">✈️</div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">회원가입</h1>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">{t('login.signupCta')}</h1>
           <p className="mt-2 text-slate-600 dark:text-slate-400">ICN Flight Alert</p>
         </div>
 
