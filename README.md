@@ -262,6 +262,12 @@ npm run test:e2e
 
 * 백엔드 `OPENAI_API_KEY` 및 RAG 관련 환경 변수를 확인합니다.
 
+### Docker: 실제 서비스는 되는데 컨테이너가 `unhealthy`로 표시됨
+
+* **원인**: `Dockerfile`의 `HEALTHCHECK`가 `wget http://localhost/`를 쓰는데, 컨테이너 내부에서 `localhost`가 IPv6(`::1`)로 먼저 해석된다. nginx는 `listen 80;`으로 IPv4(`0.0.0.0`)에만 바인딩되어 있어 헬스체크가 "Connection refused"로 계속 실패한다. 포트 매핑을 통한 실제 접속(`http://localhost:8080`)은 호스트→컨테이너 포트포워딩이라 이 문제와 무관하게 정상 동작한다.
+* **확인**: `docker inspect <frontend-container> --format='{{json .State.Health}}'`
+* **해결**: `Dockerfile`의 `HEALTHCHECK` URL을 `http://127.0.0.1/`로 명시해 IPv6 해석 문제를 우회.
+
 ---
 
 ## 🔗 관련 저장소
