@@ -106,7 +106,7 @@ function SignupPage() {
                 onClick={() => setShowPassword((v) => !v)}
                 className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-xs text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-slate-700"
               >
-                {showPassword ? '숨기기' : '보기'}
+                {showPassword ? t('login.hide') : t('login.show')}
               </button>
             </div>
           </div>
