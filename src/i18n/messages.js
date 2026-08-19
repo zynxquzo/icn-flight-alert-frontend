@@ -36,6 +36,7 @@ export const messages = {
       recipient: '수신',
       errorPrefix: '오류',
       close: '닫기',
+      unexpectedError: '일시적인 오류가 발생했습니다. 페이지를 새로고침해 주세요.',
     },
     enums: {
       flightType: { departure: '출발', arrival: '도착' },
@@ -304,6 +305,7 @@ export const messages = {
       recipient: 'To',
       errorPrefix: 'Error',
       close: 'Close',
+      unexpectedError: 'Something went wrong. Please refresh the page.',
     },
     enums: {
       flightType: { departure: 'Departure', arrival: 'Arrival' },
